@@ -1,0 +1,29 @@
+{
+    "fa_name": "test2",
+    "fa_type": "DFA",
+    "numOfStates": 3,
+    "numOfSymbols": 2,
+    "states": [
+        "A",
+        "B",
+        "C*"
+    ],
+    "symbols": [
+        "a",
+        "b"
+    ],
+    "transition": [
+        [
+            "B",
+            "C"
+        ],
+        [
+            "A",
+            "B"
+        ],
+        [
+            "C",
+            "C"
+        ]
+    ]
+}
