@@ -1,0 +1,85 @@
+#:kivy 2.3.1
+
+MainWidget:
+    
+<MainWidget>:
+    orientation: 'vertical'
+    spacing: "100dp"
+    canvas.before:
+        Color:
+            rgba: (27/255, 60/255, 83/255,0.8)
+        Rectangle:
+            pos: self.pos
+            size: self.size
+    BoxLayout:
+        orientation: 'horizontal'
+        Label:
+            text: 'Enter the number of state'
+            color: (0,0,0,0.8)
+        TextInput:
+         
+    BoxLayout:
+        orientation: 'horizontal'
+        Label:
+            text: 'Enter the number of symbol'
+            color: (0,0,0,0.8)
+        TextInput:
+    BoxLayout:
+        orientation: 'horizontal'
+        Label:
+            text: 'Enter the each symbol in format (A B C)'
+            color: (0,0,0,0.8)
+        TextInput:
+        
+            
+
+    
+
+    
+    
+# <GridLayoutExample>:
+#     cols: 2
+#     rows: 2
+#     Button:
+#         text: 'A'
+#         size_hint: (.5,1)
+#     Button:
+#         text: 'B'
+        
+#     Button:
+#         text: 'C'
+#         size_hint: (.5,1)
+
+
+# <AnchorLayoutExample>:
+#     anchor_x: 'center'
+#     anchor_y: 'bottom'
+#     Button:
+#         text: 'A'
+#         size_hint: (.1,.1)
+#     # Button:
+#     #     text: 'B'
+#     #     size_hint: (.10,.1)
+
+# <BoxLayoutExample>:
+#     orientation: "horizontal"
+#     Button:
+#         text: 'A'
+#         height: "60dp"
+#         size_hint: (.5,None)
+#         pos_hint: {"center_y":.5}
+#     BoxLayout:
+#         orientation: 'vertical'
+#         spacing: "20dp"
+#         Button:
+#             text: 'Hello'
+            
+#         Button:
+#             text: 'Hello'
+            
+#         Button:
+#             text: 'Hello'
+#     Button:
+#         text: 'C'
+    
+    
