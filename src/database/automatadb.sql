@@ -15,21 +15,23 @@ create table fa_states(
     name varchar(255)  not null, -- A or q1 or Dead
 	is_accepting boolean not null default false,
     unique(fa_id,name),
-    foreign key (fa_id) references fa_headers(id)
+    foreign key (fa_id) references fa_headers(id) on delete cascade
 );
 
 create table fa_symbols(
 	id int primary key auto_increment,
     fa_id int not null,
     symbol_char varChar(50) not null, -- symbols like 1, 0 ,a or ep for epsilon
-    unique(fa_id,symbol_char)
+    unique(fa_id,symbol_char),
+    foreign key (fa_id) references fa_headers(id) on delete cascade
 );
 
-create table fa_transitons(
+create table fa_transitions(
 	id int primary key auto_increment,
     fa_id int not null,
     from_state_name varchar(255) not null,
     symbol_char varchar(50) not null,
     to_state_name varchar(255) not null,
-    unique (fa_id,from_state_name,symbol_char,to_state_name)
+    unique (fa_id,from_state_name,symbol_char,to_state_name),
+    foreign key (fa_id) references fa_headers(id) on delete cascade
 );
