@@ -1,6 +1,5 @@
 create database if not exists automatadb;
 use automatadb;
-
 create table fa_headers(
 	id int primary key auto_increment,
     name varchar(255) unique not null,
