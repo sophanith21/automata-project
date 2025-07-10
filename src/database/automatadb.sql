@@ -17,7 +17,7 @@ create table fa_states(
     foreign key (fa_id) references fa_headers(id) on delete cascade
 );
 
-create table fa_symbols(
+create table fa_symbols( 
 	id int primary key auto_increment,
     fa_id int not null,
     symbol_char varChar(50) not null, -- symbols like 1, 0 ,a or ep for epsilon

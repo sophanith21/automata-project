@@ -1,28 +1,98 @@
 #:kivy 2.3.1
 
-MainWidget:
+WindowManager:
+    Screen:
+        name: "Welcome"
+        BoxLayout:
+            orientation: 'vertical'
+            Label:
+                text: 'Welcome to Automata Processor'
+                font_size: 30
+        
+            Button:
+                text: 'See your defined finite automatas'
+                on_release: 
+                    app.update_fa_list_widget()
+                    app.root.current = 'first'
 
-<MainWidget>:
+    FirstWindow: 
+        
+    SecondWindow:
+
+<FirstWindow>:
+    name: 'first'
+    FAListWidget:
+        id: fa_list_widget_id
+
+<SecondWindow>:
+    name: 'second'
+    FADetailWidget:
+        id: fa_detail_widget_id
+
+<FAListWidget>:
     orientation: 'vertical'
-    
-    
 
-<FA>:
+<FAWidget>:
     orientation: 'horizontal'
-    height: dp(80)  
-    padding: dp(5)
-    spacing: dp(5)
-    Label: 
+    Label:
         text: "Name: " + root.fa_name
         color: 0, 1, 1, 1
-    Label: 
-        text: "Type: " +root.fa_type
+    Label:
+        text: "Type: " + root.fa_type
         color: 0, 1, 1, 1
-    
-    Label: 
-        text: "Description: " +root.fa_description
+    Label:
+        text: "Description: " + root.fa_description
         color: 0, 1, 1, 1
     Button:
         text: 'View'
         color: 0, 1, 1, 1
+        on_release:
+            app.selected_fa_id = root.fa_id
+            app.update_fa_details_widget()
+            app.root.current = "second"
+            app.root.transition.direction = "left"
+            
+            
+
+<FADetailWidget>:
+    orientation: 'vertical'
+    Label:
+        text: 'Name: ' + ', '.join([s["name"] for s in root.fa_data_dicts["fa_header"]])
+    Label:
+        text: 'Type: ' + ', '.join([s["type"] for s in root.fa_data_dicts["fa_header"]])
+    Label:
+        text: 'Symbols: ' + ', '.join([s["symbol_char"] for s in root.fa_data_dicts["fa_symbols"]])
+    Label:
+        text: 'Start State(s): ' +', '.join([s["start_state_name"] for s in root.fa_data_dicts["fa_header"]])
+    Label:
+        text: 'States: ' + ', '.join([s["name"] for s in root.fa_data_dicts["fa_states"]])
+    Label:
+        text: 'Transition: ' + ', '.join([f"{t['from_state_name']} - {t['symbol_char']} > {t['to_state_name']}"for t in root.fa_data_dicts["fa_transitions"]])
+    BoxLayout:
+        Button:
+            text: 'Test Input'
+            on_release:
+                root.fa_data_dicts["toTestinput"] = True
+                root.print()
+                root.call_cpp_processor(root.fa_data_dicts)
+        Button:
+            text: 'Convert to DFA'
+            on_release:
+                root.fa_data_dicts["toConvertNFA"] = True
+                root.print()
+                root.call_cpp_processor(root.fa_data_dicts)
+        Button:
+            text: 'Minimization'
+            on_release:
+                root.fa_data_dicts["toMinimize"] = True
+                root.print()
+        Button:
+            text: 'Back'
+            on_release:
+                app.root.current = 'first'
+                app.root.transition.direction = 'right'
+    
+    
+
+    
             

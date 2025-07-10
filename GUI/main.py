@@ -1,141 +1,249 @@
+import os
+from kivy.uix.accordion import DictProperty
+from kivy.uix.accordion import NumericProperty
 import mysql.connector
-
+import subprocess
+import json
 from kivy.app import App
+from kivy.uix.accordion import StringProperty
+from kivy.uix.actionbar import Button
+from kivy.uix.accordion import ObjectProperty
 from kivy.uix.boxlayout import BoxLayout
 from kivy.core.window import Window
 from kivy.properties import StringProperty
+from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.lang import Builder
+
 
 Window.maximize()
 
+EPSILON_SYMBOL = "ep"  # Our chosen multi-character epsilon symbol
 
-try:
-    mydb = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        database="automatadb",
-        password="root"
+
+# define different screens
+class FirstWindow(Screen):
+    pass
+
+
+class SecondWindow(Screen):
+    pass
+
+
+class WindowManager(ScreenManager):
+    pass
+
+
+class FAWidget(BoxLayout):
+    fa_id = NumericProperty(0)
+    fa_name = StringProperty("")
+    fa_type = StringProperty("")
+    fa_description = StringProperty("")
+
+    def __init__(self, fa, **kwargs):
+        super().__init__(**kwargs)
+        self.fa_id = fa["id"]
+        self.fa_name = fa["name"]
+        self.fa_type = fa["type"]
+        self.fa_description = fa["description"]
+        print(self.fa_id)
+
+
+class FAListWidget(BoxLayout):
+    def populate(self):
+        app = App.get_running_app()
+        self.clear_widgets()
+        if app.fa_headers:
+            for fa in app.fa_headers:
+                self.add_widget(FAWidget(fa))
+        layout = BoxLayout()
+        layout.orientation = "horizontal"
+        button_1 = Button()
+        button_1.text = "Define a new finite automaton"
+        button_2 = Button()
+        button_2.text = "Refresh"
+        button_2.on_release = lambda: (
+            app.update_fa_list_widget(),
+            print("Lambda finished!"),
+        )
+        layout.add_widget(button_1)
+        layout.add_widget(button_2)
+        self.add_widget(layout)
+
+
+class FADetailWidget(BoxLayout):
+    fa_data_dicts = DictProperty(
+        {
+            "fa_header": "",
+            "fa_symbols": "",
+            "fa_states": "",
+            "fa_transitions": "",
+            "toTestInput": False,
+            "toConvertNFA": False,
+            "toMinimize": False,
+        }
     )
-    my_cursor = mydb.cursor(dictionary=True)
-    my_cursor.execute("select * from fa_headers")
-    fa_headers = my_cursor.fetchall()
-    # my_cursor.execute("select * from fa_states")
-    # fa_states = my_cursor.fetchall()
-    # my_cursor.execute("select * from fa_symbols")
-    # fa_symbols = my_cursor.fetchall()
-    # my_cursor.execute("select * from fa_transitions")
-    # fa_transitions = my_cursor.fetchall()
 
-except mysql.connector.Error as err:
-    print(f"Error: {err}")
-    fa_headers = []
+    def populate(self):
+        app = App.get_running_app()
+        cursor = app.db_cursor
+        sql_query_header = """
+                SELECT * from fa_headers
+                where id = %s
+            """
+        sql_query_states = """
+                SELECT * from fa_states
+                where fa_id = %s
+            """
+        sql_query_symbols = """
+                SELECT * from fa_symbols
+                where fa_id = %s
+            """
+        sql_query_transitions = """
+                SELECT * from fa_transitions
+                where fa_id = %s
+            """
+        cursor.execute(sql_query_header, (app.selected_fa_id,))
+        self.fa_data_dicts["fa_header"] = cursor.fetchall()
 
-finally:
-    if 'my_cursor' in locals() and my_cursor is not None:
-        my_cursor.close()
-    if 'mydb' in locals() and mydb.is_connected():
-        mydb.close()
-    
- 
-# def convert_fa_data_to_dict(fa_name_to_fetch):
-#     fa_header = None
-#     for header in fa_headers:
-#         if header["name"] == fa_name_to_fetch:
-#             fa_header = header
-#             break
+        cursor.execute(sql_query_states, (app.selected_fa_id,))
+        self.fa_data_dicts["fa_states"] = cursor.fetchall()
 
-#     if not fa_header:
-#         print(f"FA '{fa_name_to_fetch}' not found in the DB headers.")
-#         return None
+        cursor.execute(sql_query_symbols, (app.selected_fa_id,))
+        self.fa_data_dicts["fa_symbols"] = cursor.fetchall()
 
-#     fa_id = fa_header["id"]
-#     fa_data_dict = {
-#         "name": fa_header["name"],
-#         "type": fa_header["type"],
-#         "start_state": fa_header["start_state_name"]
-#     }
+        cursor.execute(sql_query_transitions, (app.selected_fa_id,))
+        self.fa_data_dicts["fa_transitions"] = cursor.fetchall()
 
-#     # 1. Get States
-#     fa_data_dict["states"] = []
-#     for state_row in fa_states:
-#         if state_row["fa_id"] == id:
-#             fa_data_dict["states"].append({
-#                 "name": state_row["name"],
-#                 "is_accepting": state_row["is_accepting"]
-#             })
+    def print(self):
+        print(json.dumps(self.fa_data_dicts, indent=4))
 
-#     # 2. Get Symbols
-#     fa_data_dict["alphabet"] = []
-#     for symbol_row in fa_symbols:
-#         if symbol_row["fa_id"] == fa_id:
-#             fa_data_dict["alphabet"].append(symbol_row["symbol_char"])
+    def call_cpp_processor(self, fa_data_dict):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        repo_root = os.path.abspath(os.path.join(script_dir, ".."))
+        cpp_executable = os.path.join(repo_root, "src", "cpp", "fa_processor.exe")
+        json_input_string = json.dumps(fa_data_dict)
 
-#     # 3. Get and Group Transitions (integrating Code 2 logic)
-#     raw_transitions_for_fa = []
-#     for trans_row in fa_transitions:
-#         if trans_row["fa_id"] == fa_id:
-#             raw_transitions_for_fa.append(trans_row)
+        try:
+            result = subprocess.run(
+                [cpp_executable],
+                input=json_input_string,  # Send JSON via stdin
+                capture_output=True,  # Capture stdout and stderr
+                text=True,  # Decode output as text (UTF-8 by default)
+                check=True,  # Raise CalledProcessError if C++ returns non-zero exit code
+            )
 
-#     # Intermediate dictionary to group transitions
-#     grouped_transitions = {}
-#     for row in raw_transitions_for_fa:
-#         from_state = row['from_state_name']
-#         symbol = row['symbol_char']
-#         to_state = row['to_state_name']
+            if result.stderr:
+                print("\n--- C++ STDERR Output ---")
+                print(result.stderr)
+                print("-------------------------\n")
 
-#         key = (from_state, symbol)
-#         if key not in grouped_transitions:
-#             grouped_transitions[key] = [] # Initialize with an empty list
-        
-#         # Only add to_state if it's not None (representing no transition)
-#         if to_state is not None:
-#             grouped_transitions[key].append(to_state)
+            if result.stdout:
+                print("--- C++ Output (JSON) ---")
+                # print(result.stdout) # Raw output for debugging
+                try:
+                    # Parse the JSON output from C++
+                    parsed_fa_data = json.loads(result.stdout)
+                    print("\n--- Parsed FA Data (from C++) in Python ---")
+                    print(json.dumps(parsed_fa_data, indent=4))
+                    self.fa_data_dict = parsed_fa_data
+                except json.JSONDecodeError as e:
+                    print(f"Error decoding JSON from C++ stdout: {e}")
+                    print(f"Raw C++ stdout: {result.stdout}")
+                    return None
+            else:
+                print("C++ program produced no stdout.")
+                return None
 
-#     # Now, transform into the list of dictionaries needed for the final JSON
-#     fa_data_dict["transitions"] = []
-#     for (from_state, symbol), to_states_list in grouped_transitions.items():
-#         fa_data_dict["transitions"].append({
-#             "from": from_state,
-#             "symbol": symbol,
-#             "to": to_states_list # This is already a list, perfect for JSON array
-#         })
-    
-#     # Sort transitions for consistent output (optional, but good for debugging)
-#     # Sort by from_state, then by symbol
-#     fa_data_dict["transitions"].sort(key=lambda x: (x['from'], x['symbol']))
+        except FileNotFoundError:
+            print(f"Error: C++ executable '{cpp_executable}' not found.")
+            print("Please ensure it's compiled and in the same directory.")
+            return None
+        except subprocess.CalledProcessError as e:
+            print(f"C++ program failed with exit code {e.returncode}")
+            print(f"Stdout:\n{e.stdout}")
+            print(f"Stderr:\n{e.stderr}")
+            return None
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+            return None
 
-#     # Option selected on the GUI
-#     fa_data_dict["toConvertNFA"] = True;
-#     fa_data_dict["toTestInput"] = False;
-#     fa_data_dict["toMinimize"] = False;
+    def on_fa_data_dicts_change(self, instance, value):
+        # This method is called whenever fa_data_dicts is updated.
+        # It updates the StringProperties which are directly used in Kivy lang.
+        if "fa_header" in value and value["fa_header"]:
+            self.fa_name = ", ".join([s["name"] for s in value["fa_header"]])
+            self.fa_type = ", ".join([s["type"] for s in value["fa_header"]])
+            self.fa_start_states = ", ".join(
+                [s["start_state_name"] for s in value["fa_header"]]
+            )
+        else:
+            self.fa_name = "N/A"
+            self.fa_type = "N/A"
+            self.fa_start_states = "N/A"
 
-#     return fa_data_dict
+        if "fa_symbols" in value and value["fa_symbols"]:
+            self.fa_symbols = ", ".join([s["symbol_char"] for s in value["fa_symbols"]])
+        else:
+            self.fa_symbols = "N/A"
 
-class FA(BoxLayout):
-    fa_name = StringProperty('')
-    fa_type = StringProperty('')
-    fa_description = StringProperty('')
+        if "fa_states" in value and value["fa_states"]:
+            self.fa_states = ", ".join([s["name"] for s in value["fa_states"]])
+        else:
+            self.fa_states = "N/A"
 
-    def __init__(self,fa, **kwargs):
-        super().__init__(**kwargs)
-        self.fa_name = fa['name']
-        self.fa_type = fa['type']
-        self.fa_description = fa['description']
-class MainWidget(BoxLayout):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        for fa in fa_headers:
-            self.add_widget(FA(fa))
-
-        
+        if "fa_transitions" in value and value["fa_transitions"]:
+            self.fa_transitions = ", ".join(
+                [
+                    f"{t['from_state_name']} - {t['symbol_char']} > {t['to_state_name']}"
+                    for t in value["fa_transitions"]
+                ]
+            )
+        else:
+            self.fa_transitions = "N/A"
 
 
 class AutomataApp(App):
-   
+    fa_headers = ObjectProperty(None)
+    db_connection = None
+    db_cursor = None
+    selected_fa_id = NumericProperty(0)
+
     def build(self):
-        return MainWidget()
+        self.connect_db()
 
-if __name__ == '__main__':
+    def connect_db(self):
+        try:
+            self.db_connection = mysql.connector.connect(
+                host="localhost", password="root", user="root", database="automatadb"
+            )
+            self.db_cursor = self.db_connection.cursor(dictionary=True)
+        except mysql.connector.errors as err:
+            print(f"Error: {err}")
+
+    def update_fa_list_widget(self):
+        self.db_cursor.execute("Select * from fa_headers")
+        self.fa_headers = self.db_cursor.fetchall()
+        first_window = self.root.get_screen("first")
+        fa_list_widget = first_window.ids.get("fa_list_widget_id")
+        if fa_list_widget:
+            fa_list_widget.populate()
+
+    def update_fa_details_widget(self):
+        second_window = self.root.get_screen("second")
+        fa_detail_widget = second_window.ids.get("fa_detail_widget_id")
+        if fa_detail_widget:
+            fa_detail_widget.populate()
+
+        print("I updated")
+
+    def on_stop(self):
+        # This method is called when the app is closing
+        if self.db_connection and self.db_connection.is_connected():
+            self.db_connection.close()
+            print("Database connection closed gracefully on app stop.")
+        else:
+            print("No active database connection to close.")
+
+
+if __name__ == "__main__":
     AutomataApp().run()
-
-
