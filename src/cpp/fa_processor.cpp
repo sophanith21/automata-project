@@ -85,6 +85,7 @@ public:
     // NFA to DFA Conversion Method
     // Returns a new FiniteAutomaton object representing the converted DFA
     std::optional<FiniteAutomaton> convertNfaToDfa() const;
+    std::optional<FiniteAutomaton> minimizeDfa() const; // DFA minimization
 
     // Getter methods for accessing private members
     const std::string& getName() const { return name_; }
@@ -351,6 +352,95 @@ std::optional<FiniteAutomaton> FiniteAutomaton::convertNfaToDfa() const {
                            dfa_states, dfa_alphabet, dfa_raw_transitions);
 }
 
+// --- DFA Minimization Algorithm (Hopcroft's Algorithm, simplified) ---
+std::optional<FiniteAutomaton> FiniteAutomaton::minimizeDfa() const {
+    if (type_ != "DFA") {
+        std::cerr << "Error: Minimization only applies to DFA." << std::endl;
+        return std::nullopt;
+    }
+    // 1. Separate accepting and non-accepting states
+    std::set<std::string> accepting, non_accepting;
+    for (const auto& s : states_) {
+        if (s.is_accepting) accepting.insert(s.name);
+        else non_accepting.insert(s.name);
+    }
+    // 2. Initial partition
+    std::vector<std::set<std::string>> partitions;
+    if (!accepting.empty()) partitions.push_back(accepting);
+    if (!non_accepting.empty()) partitions.push_back(non_accepting);
+    // 3. Refinement
+    bool changed = true;
+    while (changed) {
+        changed = false;
+        std::vector<std::set<std::string>> new_partitions;
+        for (const auto& group : partitions) {
+            std::map<std::vector<int>, std::set<std::string>> splitter;
+            for (const auto& state : group) {
+                std::vector<int> sig;
+                for (const auto& symbol : alphabet_) {
+                    auto it = transitions_map_.find({state, symbol});
+                    std::string dest = (it != transitions_map_.end() && !it->second.empty()) ? *it->second.begin() : "";
+                    int part_idx = -1;
+                    for (size_t i = 0; i < partitions.size(); ++i) {
+                        if (!dest.empty() && partitions[i].count(dest)) { part_idx = (int)i; break; }
+                    }
+                    sig.push_back(part_idx);
+                }
+                splitter[sig].insert(state);
+            }
+            if (splitter.size() == 1) {
+                new_partitions.push_back(group);
+            } else {
+                changed = true;
+                for (const auto& kv : splitter) {
+                    new_partitions.push_back(kv.second);
+                }
+            }
+        }
+        partitions = new_partitions;
+    }
+    // 4. Build new DFA
+    std::map<std::string, int> state_to_partition;
+    for (size_t i = 0; i < partitions.size(); ++i) {
+        for (const auto& s : partitions[i]) {
+            state_to_partition[s] = (int)i;
+        }
+    }
+    // New state names
+    std::vector<FAState> min_states;
+    std::vector<FATransition> min_transitions;
+    std::string min_start_state;
+    for (size_t i = 0; i < partitions.size(); ++i) {
+        bool is_accepting = false;
+        for (const auto& s : partitions[i]) {
+            if (accepting.count(s)) { is_accepting = true; break; }
+        }
+        std::string state_name = "Q" + std::to_string(i);
+        min_states.push_back({state_name, is_accepting});
+        if (partitions[i].count(start_state_)) min_start_state = state_name;
+    }
+    // Build transitions
+    for (size_t i = 0; i < partitions.size(); ++i) {
+        std::string from_name = "Q" + std::to_string(i);
+        const auto& rep = *partitions[i].begin(); // representative
+        for (const auto& symbol : alphabet_) {
+            auto it = transitions_map_.find({rep, symbol});
+            if (it != transitions_map_.end() && !it->second.empty()) {
+                std::string dest = *it->second.begin();
+                int dest_idx = state_to_partition[dest];
+                std::string to_name = "Q" + std::to_string(dest_idx);
+                FATransition t;
+                t.from_state = from_name;
+                t.symbol = symbol;
+                t.to_states.insert(to_name);
+                min_transitions.push_back(t);
+            }
+        }
+    }
+    // Return minimized DFA
+    return FiniteAutomaton(name_ + "_min", "DFA", min_start_state, min_states, alphabet_, min_transitions);
+}
+
 // --- General Utility Functions (for stdin/stdout JSON) ---
 
 std::string readStdinToString() {
@@ -427,7 +517,6 @@ int main() {
     toConvertNFA = parsed_json.at("toConvertNFA").get<bool>();
     toTestInput = parsed_json.at("toTestInput").get<bool>();
     toMinimize = parsed_json.at("toMinimize").get<bool>();
-
 
     // Create FiniteAutomaton object from parsed JSON
     std::optional<FiniteAutomaton> fa_opt = createAutomatonFromJson(parsed_json);
@@ -510,6 +599,45 @@ int main() {
             std::cerr << "Test '" << test_str4 << "': " << (original_fa.testInput(test_str4) ? "Accepted" : "Rejected") << std::endl; // Changed to cerr
         }
     }
+
+    // DFA Minimization logic
+    if (original_fa.getType() == "DFA" && toMinimize) {
+        std::cerr << "\n--- Attempting DFA Minimization ---" << std::endl;
+        std::optional<FiniteAutomaton> min_dfa_opt = original_fa.minimizeDfa();
+        if (min_dfa_opt) {
+            FiniteAutomaton min_dfa = *min_dfa_opt;
+            std::cerr << "Minimization successful! Minimized DFA:" << std::endl;
+            min_dfa.printDefinition();
+            nlohmann::json min_fa_json;
+            min_fa_json["name"] = min_dfa.getName();
+            min_fa_json["type"] = min_dfa.getType();
+            min_fa_json["start_state"] = min_dfa.getStartState();
+            min_fa_json["states"] = nlohmann::json(min_dfa.getStates());
+            min_fa_json["alphabet"] = min_dfa.getAlphabet();
+            min_fa_json["transitions"] = nlohmann::json(min_dfa.getRawTransitionsList());
+            output_json["minimized_dfa"] = min_fa_json;
+            output_json["minimization_message"] = "DFA successfully minimized.";
+            // Output accepting and non-accepting states as arrays
+            std::vector<std::string> accepting_states, non_accepting_states;
+            for (const auto& s : min_dfa.getStates()) {
+                if (s.is_accepting) accepting_states.push_back(s.name);
+                else non_accepting_states.push_back(s.name);
+            }
+            output_json["accepting_states"] = accepting_states;
+            output_json["non_accepting_states"] = non_accepting_states;
+        } else {
+            std::cerr << "DFA Minimization failed." << std::endl;
+            output_json["minimization_message"] = "DFA Minimization failed.";
+        }
+    }
+    // Example: Separate accepting and non-accepting states (for user)
+    std::vector<std::string> accepting_states, non_accepting_states;
+    for (const auto& s : original_fa.getStates()) {
+        if (s.is_accepting) accepting_states.push_back(s.name);
+        else non_accepting_states.push_back(s.name);
+    }
+    output_json["accepting_states"] = accepting_states;
+    output_json["non_accepting_states"] = non_accepting_states;
 
     // Print the final JSON output to stdout. Python will capture this.
     std::cout << output_json.dump(4) << std::endl; // This is good, leave it as cout
