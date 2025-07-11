@@ -95,6 +95,7 @@ public:
     // NFA to DFA Conversion Method
     // Returns a new FiniteAutomaton object representing the converted DFA
     optional<FiniteAutomaton> convertNfaToDfa() const;
+    void parsedSetOfStatesToState();
 
     // Getter methods for accessing private members
     const string &getName() const { return name_; }
@@ -293,6 +294,33 @@ string FiniteAutomaton::createDfaStateName(const set<string> &nfa_states) const
     oss << "}";
     return oss.str();
 }
+void FiniteAutomaton::parsedSetOfStatesToState()
+{
+    map<string, string> SetStateToState;
+    int iterator = 0;
+    for (FAState state : states_)
+    {
+
+        if (state.name != "Dead")
+        {
+            char char_val = static_cast<char>(iterator + 'A');
+            SetStateToState[state.name] = string(1, char_val);
+            state.name = string(1, char_val);
+            iterator++;
+        }
+        else
+        {
+            SetStateToState["Dead"] = "Dead";
+        }
+    }
+
+    for (FATransition &transition : raw_transitions_list_)
+    {
+        transition.from_state = SetStateToState.at(transition.from_state);
+        transition.to_state = SetStateToState.at(transition.to_state);
+    }
+    start_state_ = SetStateToState.at(start_state_);
+}
 
 // --- Main NFA to DFA Conversion Algorithm (Subset Construction) ---
 optional<FiniteAutomaton> FiniteAutomaton::convertNfaToDfa() const
@@ -393,10 +421,12 @@ optional<FiniteAutomaton> FiniteAutomaton::convertNfaToDfa() const
             dfa_raw_transitions.push_back(new_transition);
         }
     }
+    FiniteAutomaton newDFA = FiniteAutomaton(new_fa_name, new_fa_type, dfa_start_state_name,
+                                             dfa_states, dfa_alphabet, dfa_raw_transitions);
+    newDFA.parsedSetOfStatesToState();
 
     // Create and return the new DFA object
-    return FiniteAutomaton(new_fa_name, new_fa_type, dfa_start_state_name,
-                           dfa_states, dfa_alphabet, dfa_raw_transitions);
+    return newDFA;
 }
 
 // --- General Utility Functions (for stdin/stdout JSON) ---

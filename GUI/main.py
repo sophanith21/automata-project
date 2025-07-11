@@ -13,7 +13,8 @@ from kivy.core.window import Window
 from kivy.properties import StringProperty
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.lang import Builder
-
+from kivy.uix.label import Label
+from kivy.uix.popup import Popup
 
 Window.maximize()
 
@@ -61,10 +62,7 @@ class FAListWidget(BoxLayout):
         button_1.text = "Define a new finite automaton"
         button_2 = Button()
         button_2.text = "Refresh"
-        button_2.on_release = lambda: (
-            app.update_fa_list_widget(),
-            print("Lambda finished!"),
-        )
+        button_2.on_release = lambda: (app.update_fa_list_widget(),)
         layout.add_widget(button_1)
         layout.add_widget(button_2)
         self.add_widget(layout)
@@ -82,40 +80,6 @@ class FADetailWidget(BoxLayout):
             "toMinimize": False,
         }
     )
-
-    def populate(self):
-        app = App.get_running_app()
-        cursor = app.db_cursor
-        sql_query_header = """
-                SELECT * from fa_headers
-                where id = %s
-            """
-        sql_query_states = """
-                SELECT * from fa_states
-                where fa_id = %s
-            """
-        sql_query_symbols = """
-                SELECT * from fa_symbols
-                where fa_id = %s
-            """
-        sql_query_transitions = """
-                SELECT * from fa_transitions
-                where fa_id = %s
-            """
-        cursor.execute(sql_query_header, (app.selected_fa_id,))
-        self.fa_data_dicts["fa_header"] = cursor.fetchall()
-
-        cursor.execute(sql_query_states, (app.selected_fa_id,))
-        self.fa_data_dicts["fa_states"] = cursor.fetchall()
-
-        cursor.execute(sql_query_symbols, (app.selected_fa_id,))
-        self.fa_data_dicts["fa_symbols"] = cursor.fetchall()
-
-        cursor.execute(sql_query_transitions, (app.selected_fa_id,))
-        self.fa_data_dicts["fa_transitions"] = cursor.fetchall()
-
-    def print(self):
-        print(json.dumps(self.fa_data_dicts, indent=4))
 
     def call_cpp_processor(self, fa_data_dict):
         script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -145,7 +109,11 @@ class FADetailWidget(BoxLayout):
                     parsed_fa_data = json.loads(result.stdout)
                     print("\n--- Parsed FA Data (from C++) in Python ---")
                     print(json.dumps(parsed_fa_data, indent=4))
-                    self.fa_data_dict = parsed_fa_data
+                    self.fa_data_dicts = parsed_fa_data["converted_dfa"]
+                    self.fa_data_dicts["toTestInput"] = False
+                    self.fa_data_dicts["toConvertNFA"] = False
+                    self.fa_data_dicts["toMinimize"] = False
+                    self.print_data()
                 except json.JSONDecodeError as e:
                     print(f"Error decoding JSON from C++ stdout: {e}")
                     print(f"Raw C++ stdout: {result.stdout}")
@@ -167,39 +135,201 @@ class FADetailWidget(BoxLayout):
             print(f"An unexpected error occurred: {e}")
             return None
 
-    def on_fa_data_dicts_change(self, instance, value):
-        # This method is called whenever fa_data_dicts is updated.
-        # It updates the StringProperties which are directly used in Kivy lang.
-        if "fa_header" in value and value["fa_header"]:
-            self.fa_name = ", ".join([s["name"] for s in value["fa_header"]])
-            self.fa_type = ", ".join([s["type"] for s in value["fa_header"]])
-            self.fa_start_states = ", ".join(
-                [s["start_state_name"] for s in value["fa_header"]]
+    def populate(self):
+        app = App.get_running_app()
+        self.clear_widgets()
+        cursor = app.db_cursor
+        sql_query_header = """
+                SELECT * from fa_headers
+                where id = %s
+            """
+        sql_query_states = """
+                SELECT * from fa_states
+                where fa_id = %s
+            """
+        sql_query_symbols = """
+                SELECT * from fa_symbols
+                where fa_id = %s
+            """
+        sql_query_transitions = """
+                SELECT * from fa_transitions
+                where fa_id = %s
+            """
+        cursor.execute(sql_query_header, (app.selected_fa_id,))
+        self.fa_data_dicts["fa_header"] = cursor.fetchall()
+
+        cursor.execute(sql_query_states, (app.selected_fa_id,))
+        self.fa_data_dicts["fa_states"] = cursor.fetchall()
+
+        cursor.execute(sql_query_symbols, (app.selected_fa_id,))
+        self.fa_data_dicts["fa_symbols"] = cursor.fetchall()
+
+        cursor.execute(sql_query_transitions, (app.selected_fa_id,))
+        self.fa_data_dicts["fa_transitions"] = cursor.fetchall()
+        name = Label()
+        name.text = "Name: " + ", ".join(
+            [s["name"] for s in self.fa_data_dicts["fa_header"]]
+        )
+        type = Label()
+        type.text = "Type: " + ", ".join(
+            [s["type"] for s in self.fa_data_dicts["fa_header"]]
+        )
+        symbols = Label()
+        symbols.text = "Symbols: " + ", ".join(
+            [s["symbol_char"] for s in self.fa_data_dicts["fa_symbols"]]
+        )
+        start_state = Label()
+        start_state.text = "Start State(s): " + ", ".join(
+            [s["start_state_name"] for s in self.fa_data_dicts["fa_header"]]
+        )
+        states = Label()
+        states.text = "States: " + ", ".join(
+            [s["name"] for s in self.fa_data_dicts["fa_states"]]
+        )
+        transitions = Label()
+        transitions.text = "Transition: " + ", ".join(
+            [
+                f"{t['from_state_name']} - {t['symbol_char']} > {t['to_state_name']}"
+                for t in self.fa_data_dicts["fa_transitions"]
+            ]
+        )
+        self.add_widget(name)
+        self.add_widget(type)
+        self.add_widget(symbols)
+        self.add_widget(start_state)
+        self.add_widget(states)
+        self.add_widget(transitions)
+        layout = BoxLayout()
+        test_input = Button()
+        test_input.text = "Test Input"
+
+        test_input.on_release = self.test_input_button
+
+        convertNFA = Button()
+        convertNFA.text = "Convert to DFA"
+
+        convertNFA.on_release = self.convertNFA_button
+
+        minimization = Button()
+        minimization.text = "Minimization"
+
+        minimization.on_release = self.minimization_button
+
+        back = Button()
+        back.text = "Back"
+
+        back.on_release = self.back_button
+
+        layout.add_widget(test_input)
+        layout.add_widget(convertNFA)
+        layout.add_widget(minimization)
+        layout.add_widget(back)
+        self.add_widget(layout)
+
+    def print_data(self):
+        print(json.dumps(self.fa_data_dicts, indent=4))
+
+    def test_input_button(self):
+        self.fa_data_dicts["toTestinput"] = (True,)
+        self.print_data(),
+        self.call_cpp_processor(self.fa_data_dicts)
+
+    def convertNFA_button(self):
+        self.fa_data_dicts["toConvertNFA"] = True
+        self.print_data()
+        self.call_cpp_processor(self.fa_data_dicts)
+        self.update_display()
+
+    def minimization_button(self):
+        self.fa_data_dicts["toMinimize"] = True
+        self.print_data()
+
+    def back_button(self):
+        app = App.get_running_app()
+        app.root.current = "first"
+        app.root.transition.direction = "right"
+
+    def back_nfa_button(self):
+        self.populate()
+
+    def save_database_button(self):
+        app = App.get_running_app
+        cursor = app.db_cursor
+        cursor.execute(
+            "insert into fa_headers values (%s,%s,%s)",
+            (
+                self.fa_data_dicts["fa_header"]["name"],
+                self.fa_data_dicts["fa_header"]["type"],
+                self.fa_data_dicts["fa_header"]["start_state_name"],
+            ),
+        )
+        fa_id = cursor.lastrowid
+        for state in self.fa_data_dicts["fa_states"]:
+            cursor.execute(
+                "Insert into fa_states values (%s,%s,%s)",
+                (fa_id, state["name"], state["is_accepting"]),
             )
-        else:
-            self.fa_name = "N/A"
-            self.fa_type = "N/A"
-            self.fa_start_states = "N/A"
+        for symbol in self.fa_data_dicts["fa_symbols"]:
+            cursor.execute("insert into fa_symbols values (%s,%s)", (fa_id, symbol))
 
-        if "fa_symbols" in value and value["fa_symbols"]:
-            self.fa_symbols = ", ".join([s["symbol_char"] for s in value["fa_symbols"]])
-        else:
-            self.fa_symbols = "N/A"
-
-        if "fa_states" in value and value["fa_states"]:
-            self.fa_states = ", ".join([s["name"] for s in value["fa_states"]])
-        else:
-            self.fa_states = "N/A"
-
-        if "fa_transitions" in value and value["fa_transitions"]:
-            self.fa_transitions = ", ".join(
-                [
-                    f"{t['from_state_name']} - {t['symbol_char']} > {t['to_state_name']}"
-                    for t in value["fa_transitions"]
-                ]
+        for transition in self.fa_data_dicts["fa_transitions"]:
+            cursor.execute(
+                "insert into fa_transitions values (%s,%s,%s,%s)",
+                (
+                    fa_id,
+                    transition["from_state_name"],
+                    transition["symbol_char"],
+                    transition["to_state_name"],
+                ),
             )
-        else:
-            self.fa_transitions = "N/A"
+
+    def update_display(self):
+        self.clear_widgets()
+        name = Label()
+        name.text = (
+            "Name: " + self.fa_data_dicts["fa_header"]["name"]
+        )  # cpp send fa_header in dict not array
+        type = Label()
+        type.text = "Type: " + self.fa_data_dicts["fa_header"]["type"]
+        symbols = Label()
+        symbols.text = "Symbols: " + ", ".join(
+            [s for s in self.fa_data_dicts["fa_symbols"]]
+        )
+        start_state = Label()
+        start_state.text = (
+            "Start State: " + self.fa_data_dicts["fa_header"]["start_state_name"]
+        )
+        states = Label()
+        states.text = "States: " + ", ".join(
+            [s["name"] for s in self.fa_data_dicts["fa_states"]]
+        )
+        transitions = Label()
+        transitions.text = "Transition: " + ", ".join(
+            [
+                f"{t['from_state_name']} - {t['symbol_char']} > {t['to_state_name']}"
+                for t in self.fa_data_dicts["fa_transitions"]
+            ]
+        )
+        self.add_widget(name)
+        self.add_widget(type)
+        self.add_widget(symbols)
+        self.add_widget(start_state)
+        self.add_widget(states)
+        self.add_widget(transitions)
+        layout = BoxLayout()
+        save_database = Button()
+        save_database.text = "Save to Database"
+
+        save_database.on_release = self.test_input_button
+
+        back_nfa = Button()
+        back_nfa.text = "Back to NFA"
+
+        back_nfa.on_release = self.back_nfa_button
+
+        layout.add_widget(save_database)
+        layout.add_widget(back_nfa)
+        self.add_widget(layout)
 
 
 class AutomataApp(App):
