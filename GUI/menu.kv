@@ -1,0 +1,43 @@
+#:kivy 2.3.1
+WindowScreenManager:
+    WelcomeScreen:
+    FaListsScreen:
+
+<WelcomeScreen>:
+    name: "Introduction"
+    BoxLayout:
+        orientation: 'vertical'
+        size: root.width, root.height 
+
+        Label:
+            text: "WELCOME TO OUR AUTOMATA PROJECT DEMO" 
+            font_size: dp(50)
+
+        Button:
+            text: "Design FA"
+            size_hint_y: None
+            height: dp(50)
+            font_size: dp(25)
+            background_normal: ''
+            background_color: (0.65, 0.75, 0.65, 1)
+            on_press: app.root.current = "design_fa"
+        Button:
+            text: "Fa Lists"
+            size_hint_y: None
+            height: dp(50)
+            font_size: dp(25)
+            background_normal: ''
+            background_color: (0.65, 0.75, 0.65, 1)
+            on_press: app.root.current = "fa_lists"
+                    
+
+<FaListsScreen>:
+    name: "Fa list"
+    BoxLayout:
+        orientation: 'vertical'
+        size: root.width,  root.height 
+    Label: 
+        text:"Fa Lists"
+        font_size: dp(50)
+    
+

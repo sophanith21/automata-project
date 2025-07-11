@@ -1,0 +1,32 @@
+{
+    "states": [
+        "A",
+        "B*"
+    ],
+    "numOfState": 2,
+    "symbols": [
+        "0",
+        "1"
+    ],
+    "numOfSymbol": 2,
+    "hasEpsilon": false,
+    "transitions": {
+        "A": {
+            "0": [
+                "A"
+            ],
+            "1": [
+                "B"
+            ]
+        },
+        "B": {
+            "0": [
+                "A"
+            ],
+            "1": [
+                "B"
+            ]
+        }
+    },
+    "fatype": "DFA"
+}
