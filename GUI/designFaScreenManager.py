@@ -175,8 +175,14 @@ class DesignFaScreen(Screen):
             for state, transitions in self.input_data['transitions'].items():
                 for symbol, nextStates in transitions.items():
                     for nextState in nextStates:
-                        mycursor.execute("INSERT INTO fa_transitions (fa_id, from_state_name, symbol_char, to_state_name) VALUES (%s, %s, %s, %s)", 
-                        (faId, state, symbol, nextState))
+                        if ',' in nextState:
+                            splitStates = nextState.split(',')
+                            for splitState in splitStates:
+                                mycursor.execute("INSERT INTO fa_transitions (fa_id, from_state_name, symbol_char, to_state_name) VALUES (%s, %s, %s, %s)", 
+                                                (faId, state, symbol, splitState.strip()))
+                        else:
+                            mycursor.execute("INSERT INTO fa_transitions (fa_id, from_state_name, symbol_char, to_state_name) VALUES (%s, %s, %s, %s)", 
+                            (faId, state, symbol, nextState))
             mydb.commit()
             print(f"{mycursor.rowcount} record inserted.")
 

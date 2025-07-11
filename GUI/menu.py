@@ -21,7 +21,6 @@ class WindowScreenManager(ScreenManager):
     pass
 
 
-
 # kv file
 menuKv = Builder.load_file('menu.kv')   
 
