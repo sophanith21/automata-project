@@ -7,7 +7,7 @@ create table fa_headers(
     start_state_name varchar(255) not null, -- eg q0 or A
     description text
 ); 
-
+ 
 create table fa_states(
 	id int primary key auto_increment,
     fa_id int not null,

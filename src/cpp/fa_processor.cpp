@@ -298,7 +298,7 @@ void FiniteAutomaton::parsedSetOfStatesToState()
 {
     map<string, string> SetStateToState;
     int iterator = 0;
-    for (FAState state : states_)
+    for (FAState& state : states_)
     {
 
         if (state.name != "Dead")

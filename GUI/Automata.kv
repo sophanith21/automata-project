@@ -17,12 +17,14 @@ WindowManager:
 
     FirstWindow: 
         
+    DesignFaScreen:
+        
     SecondWindow:
 
 <FirstWindow>:
     name: 'first'
     FAListWidget:
-        id: fa_list_widget_id
+        id: fa_list_widget_id 
 
 <SecondWindow>:
     name: 'second'
@@ -56,3 +58,254 @@ WindowManager:
 
 <FADetailWidget>:
     orientation: 'vertical'
+
+<DesignFaScreen>:
+    name: "design_fa" # this name is for screen manager assembling
+    BoxLayout:
+        orientation: 'vertical'
+        BoxLayout:
+            orientation: 'horizontal'
+            size_hint_y: None
+            height: dp(50)
+            Label:
+                text: 'Design FA'
+                font_size: 50
+        GridLayout:
+            cols: 2
+            spacing: 10
+            padding: 20
+            
+            Label:
+                text: 'Enter the states'
+                size_hint_y: None
+                height: dp(50)
+            TextInput:
+                id: states
+                multiline: False
+                hint_text: "a b c"
+                size_hint_y: None
+                height: dp(50)
+            
+
+            Label:
+                text: 'Enter the symbols'
+                size_hint_y: None
+                height: dp(50)
+            TextInput:
+                id: symbols
+                multiline: False
+                hint_text: "Ex: a b c"
+                size_hint_y: None
+                height: dp(50)
+
+            Label:
+                text: 'Do the FA include epsilon ?'
+                size_hint_y: None
+                height: dp(50)
+            BoxLayout:
+                orientation: 'horizontal'
+                spacing: 5
+                size_hint_y: None
+                height: dp(50)
+                Label:
+                    text: 'Yes'
+                    size_hint_y: None
+                    height: dp(50)
+                CheckBox:
+                    id: yesCheckBox
+                    group: 'includeEpsilon'
+                    on_active: root.update_transition_table()
+                    size_hint_y: None
+                    height: dp(50)
+                Label:
+                    text: 'No'
+                    size_hint_y: None
+                    height: dp(50)
+                CheckBox:
+                    id: noCheckbox
+                    group: 'includeEpsilon'
+                    on_active: root.update_transition_table()
+                    active: True
+                    size_hint_y: None
+                    height: dp(50)
+            Label:
+                text: 'Please enter the accepting state'
+                size_hint_y: None
+                height: dp(50)
+            TextInput:
+                id: acceptingStates
+                multiline: False
+                hint_text: "Ex: a b c"
+                height: dp(50)
+                size_hint_y: None
+                height: dp(50)
+
+            Label: 
+                text: 'click the button to generate the transition table'
+                size_hint_y: None
+                height: dp(50)
+            
+            Button:
+                orientation: 'horizontal'
+                text: 'update transition table'
+                font_size: 40
+                height: dp(50)
+                background_normal: ''
+                background_color: (0.65, 0.75, 0.65, 1)
+                on_press: root.update_transition_table()
+                size_hint_y: None
+
+            Label: 
+                text: 'Transition'
+
+            ScrollView:
+                BoxLayout:
+                    id: transition_table_container
+                    orientation: 'vertical'
+                    size_hint_y: None
+                    height: max(dp(200), self.minimum_height)
+                    padding: 10
+                    spacing: 10
+                    canvas.before:
+                        Color:
+                            rgba: 0.95, 0.95, 0.95, 1  
+                        Rectangle: 
+                            pos: self.pos
+                            size: self.size
+            Button:            
+                orientation: 'horizontal'
+                text: 'Submit'
+                font_size: 40
+                background_normal: ''
+                background_color: (0.65, 0.75, 0.65, 1)
+                on_press: root.on_submit()
+            ScrollView:
+                do_scroll_y: True
+                do_scroll_x: False
+                BoxLayout:
+                    id:jsonDataDisplaying
+                    orientation: 'vertical'
+                    size_hint_y: None
+                    height: max(dp(200), self.minimum_height)
+                    padding: 10
+                    spacing: 10
+                    font_size: 25
+                    background_color: 1,1,1,1   
+                    foreground_color: 0,0,0,1 
+                    canvas.before:
+                        Color:
+                            rgba: 1,1,1,1    
+                        Rectangle: 
+                            pos: self.pos
+                            size: self.size
+    BoxLayout:
+        orientation: 'horizontal'
+        size_hint_y: None
+        height: dp(50)
+        Button:
+            orientation: 'horizontal'
+            text: 'Save to database'
+            font_size: 40
+            background_normal: ''
+            background_color: (0.65, 0.75, 0.65, 1)
+            on_press: root.popUpscreen()
+        
+
+
+<TransitionTableHeader@BoxLayout>:
+    size_hint_y: None
+    height: dp(50)
+    spacing: dp(5)
+    canvas.before:
+        Color:
+            rgba: 0.8, 0.8, 0.8, 1  
+        Rectangle:
+            pos: self.pos
+            size: self.size
+    Label:
+        text: "States"
+        size_hint_x: 0.3
+        bold: True
+    Label:
+        text: "Symbols"
+        size_hint_x: 0.3
+        bold: True
+    Label:
+        text: "Transition To"
+        size_hint_x: 0.4
+        bold: True
+    
+
+<TransitionTableRow@BoxLayout>:
+    index: 0
+    size_hint_y: None
+    height: dp(50)
+    spacing: dp(5)
+    canvas.before:
+        Color:
+            # rgba: (0.9, 0.9, 0.9, 1) if self.index % 2 else (0.8, 0.8, 0.8, 1)
+            rgba: (0.8, 0.8, 0.8, 1)
+        Rectangle:
+            pos: self.pos
+            size: self.size
+    Label:
+        id: stateLabel
+        text: ""
+        size_hint_x: 0.3
+        color: (0, 0, 0, 1)  
+        bold: True
+    Label:
+        id: symbolLabel
+        text: ""
+        size_hint_x: 0.3
+        color: (0, 0, 0, 1)  
+        bold: True
+    TextInput:
+        id: transitionLabel
+        size_hint_x: 0.4
+        multiline: False
+        write_tab: False
+        hint_text: "Enter transition value"
+        background_color: (1, 1, 1, 1)
+        foreground_color: (0, 0, 0, 1)
+        hint_text_color: (0.5, 0.5, 0.5, 1)
+        canvas.after:
+            Color:
+                rgba: 1, 0, 0, 0.3  
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+<popUpScreen@Popup>:
+    title: "Save to database"
+    size_hint: None, None
+    size: dp(400), dp(250)
+    auto_dismiss: False
+    BoxLayout:
+        orientation: "vertical"
+        padding: 10
+        spacing: 10
+        Label:
+            text: "Enter a name to save:"
+            size_hint_y: None
+            height: 30
+        TextInput:
+            id: faNameInput
+            multiline: False
+            hint_text: "Enter name here..."
+        Label:
+            text: "Enter a description (optional)"
+            size_hint_y: None
+            height: 30
+        TextInput:
+            id: descriptionInput
+            multiline: False
+            hint_text: "Enter descriiption here..."
+        Button:
+            text: "Save"
+            size_hint_y: None
+            height: 40
+            on_press: 
+                root.main_widget.getFaInfoFromPopUp()
+                root.main_widget.saveToDatabase()
+                root.dismiss()
