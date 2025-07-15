@@ -643,24 +643,47 @@ class FADetailWidget(BoxLayout):
         states.valign = "top"
         states.text_size = (None, states.height)
 
-        transitions = Label()
-        transitions.font_size = dp(20)
-        transitions.text = "Transition " + "".join(
-            [
-                f"\n{t['from_state_name']} -- ({t['symbol_char']}) -> {t['to_state_name']}"
-                for t in self.fa_data_dicts["fa_transitions"]
-            ]
+        box = BoxLayout(
+            orientation="vertical", size_hint_y=None, padding=[dp(100), 0, 0, 0]
         )
-        transitions.color = (0, 0, 0, 1)
-        transitions.pos = states.pos
+        box.bind(minimum_height=box.setter("height"))
+        transitions_scroll = ScrollView(bar_width=dp(10))
+        for t in self.fa_data_dicts["fa_transitions"]:
+            transitions = Label(
+                font_size=dp(20),
+                text=f"{t['from_state_name']} -- ({t['symbol_char']}) -> {t['to_state_name']}",
+                color=(0, 0, 0, 1),
+                size_hint_y=None,
+                height=dp(30),
+                halign="left",
+                valign="middle",
+            )
+            transitions.bind(
+                width=lambda instance, value: setattr(
+                    instance, "text_size", (value, None)
+                )
+            )
 
+            box.add_widget(transitions)
+
+        transitions_scroll.add_widget(box)
         self.add_widget(name)
         layout1 = BoxLayout(orientation="horizontal")
         layout1.add_widget(type)
         layout1.add_widget(symbols)
         layout1.add_widget(start_state)
         layout1.add_widget(states)
-        layout1.add_widget(transitions)
+        transition_container = BoxLayout(orientation="vertical")
+        transition_container.add_widget(
+            Label(
+                text="Transitions (scroll for more)",
+                size_hint_y=None,
+                height=dp(40),
+                color=(0, 0, 0, 1),
+            )
+        )
+        transition_container.add_widget(transitions_scroll)
+        layout1.add_widget(transition_container)
         self.add_widget(layout1)
         self.add_widget(Drawing(self.fa_data_dicts))
 
@@ -842,7 +865,7 @@ class FADetailWidget(BoxLayout):
                     self.fa_data_dicts["fa_header"]["name"],
                     self.fa_data_dicts["fa_header"]["type"],
                     self.fa_data_dicts["fa_header"]["start_state_name"],
-                    "A converted DFA converted from an NFA",
+                    "Placeholder",
                 ),
             )
             fa_id = cursor.lastrowid
