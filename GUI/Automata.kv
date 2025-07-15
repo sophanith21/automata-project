@@ -3,18 +3,27 @@
 WindowManager:
     Screen:
         name: "Welcome"
+        
         BoxLayout:
             orientation: 'vertical'
+            padding: dp(200)
             Label:
                 text: 'Welcome to Automata Processor'
-                font_size: 30
-        
-            Button:
+                font_size: dp(75)
+                color: (0,0,0,1)
+                bold: True
+            RoundedButton:
                 text: 'See your defined finite automatas'
+                color: (0, 0, 0, 1) if self.state=='normal' else (0,0,0,0.5)
+                size_hint: (None,None)
+                height: dp(100)
+                width: dp(450)
+                font_size: dp(25)
+                pos_hint: {'center_x': 0.5, 'center_y':0}
                 on_release: 
                     app.update_fa_list_widget()
                     app.root.current = 'first'
-
+    
     FirstWindow: 
         
     DesignFaScreen:
@@ -36,23 +45,63 @@ WindowManager:
 
 <FAWidget>:
     orientation: 'horizontal'
+    canvas.before:
+        Color:
+            rgba: 0,0,0,1
+        Line:
+            width: 2
+            rectangle: (self.x + dp(10), self.y, self.width, self.height)
     Label:
-        text: "Name: " + root.fa_name
-        color: 0, 1, 1, 1
+        text: root.fa_name
+        color: 0, 0, 0, 1
+        halign: 'left'
+        text_size : (self.width - dp(100), None)
+        canvas.before:
+            Color:
+                rgba: 0,0,0,1
+            Line:
+                width: 2
+                rectangle: (self.x + dp(10), self.y, self.width, self.height)
     Label:
-        text: "Type: " + root.fa_type
-        color: 0, 1, 1, 1
+        text:root.fa_type
+        color: 0, 0, 0, 1
+        halign: 'left'
+        text_size : (self.width - dp(100), None)
+        canvas.before:
+            Color:
+                rgba: 0,0,0,1
+            Line:
+                width: 2
+                rectangle: (self.x + dp(10), self.y, self.width, self.height)
     Label:
-        text: "Description: " + root.fa_description
-        color: 0, 1, 1, 1
+        text:root.fa_description
+        color: 0, 0, 0, 1
+        halign: 'left'
+        text_size : (self.width - dp(100), None)
+        canvas.before:
+            Color:
+                rgba: 0,0,0,1
+            Line:
+                width: 2
+                rectangle: (self.x + dp(10), self.y, self.width, self.height)
     Button:
         text: 'View'
-        color: 0, 1, 1, 1
+        color: 0, 0, 0, 1
+        size_hint: (None,1)
+        width: dp(200)
+        background_color: (0.65, 0.8, 0.65, 1)
+        background_normal: ''
         on_release:
             app.selected_fa_id = root.fa_id
             app.update_fa_details_widget()
             app.root.current = "second"
             app.root.transition.direction = "left"
+        canvas.before:
+            Color:
+                rgba: 0,0,0,1
+            Line:
+                width: 2
+                rectangle: (self.x + dp(10), self.y, self.width, self.height)
             
             
 
@@ -60,155 +109,179 @@ WindowManager:
     orientation: 'vertical'
 
 <DesignFaScreen>:
-    name: "design_fa" # this name is for screen manager assembling
+    name: "design_fa"
     BoxLayout:
         orientation: 'vertical'
-        BoxLayout:
-            orientation: 'horizontal'
+        padding: dp(20)
+        spacing: dp(15)
+
+        Label:
+            text: 'Design a New Finite Automaton'
+            font_size: dp(40)
+            color: (0,0,0,1)
+            bold: True
             size_hint_y: None
-            height: dp(50)
-            Label:
-                text: 'Design FA'
-                font_size: 50
+            height: self.texture_size[1] + dp(20)
+
         GridLayout:
             cols: 2
-            spacing: 10
-            padding: 20
-            
+            spacing: dp(20)
+            padding: dp(10)
+            size_hint_y: None
+            height: self.minimum_height
+
             Label:
-                text: 'Enter the states'
-                size_hint_y: None
-                height: dp(50)
+                text: 'States:'
+                font_size: dp(18)
+                color: (0,0,0,1)
+                halign: 'right'
+                valign: 'middle'
+                text_size: self.size
             TextInput:
                 id: states
-                multiline: False
-                hint_text: "a b c"
+                hint_text: "e.g., q0 q1 q2"
+                font_size: dp(16)
                 size_hint_y: None
-                height: dp(50)
-            
+                height: dp(40)
 
             Label:
-                text: 'Enter the symbols'
-                size_hint_y: None
-                height: dp(50)
+                text: 'Symbols:'
+                font_size: dp(18)
+                color: (0,0,0,1)
+                halign: 'right'
+                valign: 'middle'
+                text_size: self.size
             TextInput:
                 id: symbols
-                multiline: False
-                hint_text: "Ex: a b c"
+                hint_text: "e.g., a b"
+                font_size: dp(16)
                 size_hint_y: None
-                height: dp(50)
+                height: dp(40)
 
             Label:
-                text: 'Do the FA include epsilon ?'
+                text: 'Accepting States:'
+                font_size: dp(18)
+                color: (0,0,0,1)
+                halign: 'right'
+                valign: 'middle'
+                text_size: self.size
+            TextInput:
+                id: acceptingStates
+                hint_text: "e.g., q2"
+                font_size: dp(16)
                 size_hint_y: None
-                height: dp(50)
+                height: dp(40)
+
+            Label:
+                text: 'Epsilon Transitions?'
+                font_size: dp(18)
+                color: (0,0,0,1)
+                halign: 'right'
+                valign: 'middle'
+                text_size: self.size
             BoxLayout:
-                orientation: 'horizontal'
-                spacing: 5
+                spacing: dp(10)
                 size_hint_y: None
-                height: dp(50)
-                Label:
-                    text: 'Yes'
-                    size_hint_y: None
-                    height: dp(50)
+                height: dp(40)
                 CheckBox:
                     id: yesCheckBox
                     group: 'includeEpsilon'
                     on_active: root.update_transition_table()
-                    size_hint_y: None
-                    height: dp(50)
                 Label:
-                    text: 'No'
-                    size_hint_y: None
-                    height: dp(50)
+                    text: 'Yes'
+                    font_size: dp(16)
+                    color: (0,0,0,1)
                 CheckBox:
                     id: noCheckbox
                     group: 'includeEpsilon'
-                    on_active: root.update_transition_table()
                     active: True
-                    size_hint_y: None
-                    height: dp(50)
-            Label:
-                text: 'Please enter the accepting state'
-                size_hint_y: None
-                height: dp(50)
-            TextInput:
-                id: acceptingStates
-                multiline: False
-                hint_text: "Ex: a b c"
-                height: dp(50)
-                size_hint_y: None
-                height: dp(50)
+                    on_active: root.update_transition_table()
+                Label:
+                    text: 'No'
+                    font_size: dp(16)
+                    color: (0,0,0,1)
 
-            Label: 
-                text: 'click the button to generate the transition table'
-                size_hint_y: None
-                height: dp(50)
-            
-            Button:
-                orientation: 'horizontal'
-                text: 'update transition table'
-                font_size: 40
-                height: dp(50)
-                background_normal: ''
-                background_color: (0.65, 0.75, 0.65, 1)
-                on_press: root.update_transition_table()
-                size_hint_y: None
-
-            Label: 
-                text: 'Transition'
-
-            ScrollView:
-                BoxLayout:
-                    id: transition_table_container
-                    orientation: 'vertical'
-                    size_hint_y: None
-                    height: max(dp(200), self.minimum_height)
-                    padding: 10
-                    spacing: 10
-                    canvas.before:
-                        Color:
-                            rgba: 0.95, 0.95, 0.95, 1  
-                        Rectangle: 
-                            pos: self.pos
-                            size: self.size
-            Button:            
-                orientation: 'horizontal'
-                text: 'Submit'
-                font_size: 40
-                background_normal: ''
-                background_color: (0.65, 0.75, 0.65, 1)
-                on_press: root.on_submit()
-            ScrollView:
-                do_scroll_y: True
-                do_scroll_x: False
-                BoxLayout:
-                    id:jsonDataDisplaying
-                    orientation: 'vertical'
-                    size_hint_y: None
-                    height: max(dp(200), self.minimum_height)
-                    padding: 10
-                    spacing: 10
-                    font_size: 25
-                    background_color: 1,1,1,1   
-                    foreground_color: 0,0,0,1 
-                    canvas.before:
-                        Color:
-                            rgba: 1,1,1,1    
-                        Rectangle: 
-                            pos: self.pos
-                            size: self.size
-    BoxLayout:
-        orientation: 'horizontal'
-        size_hint_y: None
-        height: dp(50)
         Button:
-            orientation: 'horizontal'
-            text: 'Save to database'
-            font_size: 40
-            background_normal: ''
+            text: 'Generate Transition Table'
+            font_size: dp(18)
+            size_hint_y: None
+            height: dp(50)
             background_color: (0.65, 0.75, 0.65, 1)
-            on_press: root.popUpscreen()
+            background_normal: ''
+            on_press: root.update_transition_table()
+
+        BoxLayout:
+            orientation: 'horizontal'
+            spacing: dp(20)
+            
+            BoxLayout:
+                orientation: 'vertical'
+                Label:
+                    text: 'Transition Table'
+                    font_size: dp(22)
+                    color: (0,0,0,1)
+                    bold: True
+                    size_hint_y: None
+                    height: dp(40)
+                ScrollView:
+                    bar_width: dp(10)
+                    bar_color: (0.65, 0.75, 0.65, 1)
+                    BoxLayout:
+                        id: transition_table_container
+                        orientation: 'vertical'
+                        size_hint_y: None
+                        height: self.minimum_height
+                        padding: dp(5)
+                        spacing: dp(5)
+
+            BoxLayout:
+                orientation: 'vertical'
+                Label:
+                    text: 'FA Definition'
+                    font_size: dp(22)
+                    color: (0,0,0,1)
+                    bold: True
+                    size_hint_y: None
+                    height: dp(40)
+                ScrollView:
+                    bar_width: dp(10)
+                    bar_color: (0.65, 0.75, 0.65, 1)
+                    BoxLayout:
+                        id: jsonDataDisplaying
+                        orientation: 'vertical'
+                        size_hint_y: None
+                        height: self.minimum_height
+                        padding: dp(10)
+                        spacing: dp(5)
+
+        Button:
+            text: 'Submit FA'
+            font_size: dp(18)
+            size_hint_y: None
+            height: dp(50)
+            background_color: (0.65, 0.75, 0.65, 1)
+            background_normal: ''
+            on_press: root.on_submit()
+
+        BoxLayout:
+            size_hint_y: None
+            height: dp(50)
+            spacing: dp(20)
+            Button:
+                text: 'Save to Database'
+                font_size: dp(18)
+                background_color: (0.65, 0.75, 0.65, 1)
+                background_normal: ''
+                on_press: root.popUpscreen()
+            Button:
+                text: 'Back'
+                font_size: dp(18)
+                background_color: (0.8, 0.65, 0.65, 1)
+                background_normal: ''
+                on_press:
+                    app.root.current = 'first'
+                    app.root.transition.direction = 'right'
+
         
 
 
@@ -226,14 +299,17 @@ WindowManager:
         text: "States"
         size_hint_x: 0.3
         bold: True
+        color: (0,0,0,1)
     Label:
         text: "Symbols"
         size_hint_x: 0.3
         bold: True
+        color: (0,0,0,1)
     Label:
         text: "Transition To"
         size_hint_x: 0.4
         bold: True
+        color: (0,0,0,1)
     
 
 <TransitionTableRow@BoxLayout>:
@@ -280,7 +356,13 @@ WindowManager:
     title: "Save to database"
     size_hint: None, None
     size: dp(400), dp(250)
-    auto_dismiss: False
+    separator_color:(0.65, 0.75, 0.65, 1)
+    canvas.before:
+        Color:
+            rgba: (0.65, 0.75, 0.65, 1) 
+        Rectangle:
+            pos: self.pos
+            size: self.size
     BoxLayout:
         orientation: "vertical"
         padding: 10
@@ -289,23 +371,97 @@ WindowManager:
             text: "Enter a name to save:"
             size_hint_y: None
             height: 30
+            color: (1,1,1,1)
         TextInput:
             id: faNameInput
             multiline: False
             hint_text: "Enter name here..."
+            foreground_color: (0,0,0,1)
+            hint_text_color: (0.5,0.5,0.5,1)
         Label:
             text: "Enter a description (optional)"
             size_hint_y: None
             height: 30
+            color: (1,1,1,1)
         TextInput:
             id: descriptionInput
             multiline: False
             hint_text: "Enter descriiption here..."
+            foreground_color: (0,0,0,1)
+            hint_text_color: (0.5,0.5,0.5,1)
         Button:
             text: "Save"
             size_hint_y: None
             height: 40
+            color: (0,0,0,1)
+            background_normal: ''
+            background_color: (0.65, 0.75, 0.65, 1)
             on_press: 
                 root.main_widget.getFaInfoFromPopUp()
                 root.main_widget.saveToDatabase()
                 root.dismiss()
+
+<popUpScreenTestInput@Popup>:
+    title: "Test Input"
+    size_hint: None, None
+    size: dp(400), dp(250)
+    overlay_color: (0,0,0,0)
+    pos_hint: {'center_y': 0.45, 'right': 0.85}
+    separator_color:(0.65, 0.75, 0.65, 1)
+    canvas.before:
+        Color:
+            rgba: (0.65, 0.75, 0.65, 1) 
+        Rectangle:
+            pos: self.pos
+            size: self.size
+    BoxLayout:
+        orientation: "vertical"
+        padding: 10
+        spacing: 10
+        Label:
+            text: "Enter a string to test:"
+            size_hint_y: None
+            height: 30
+            color: (1,1,1,1)
+        TextInput:
+            id: faNameInput
+            multiline: False
+            hint_text: "Enter the string here..."
+            foreground_color: (0,0,0,1)
+            hint_text_color: (0.5,0.5,0.5,1)
+        Label:
+            id: result
+            text: "Result"
+        Button:
+            id : test_button
+            background_normal: ''
+            background_color: (0.65, 0.75, 0.65, 1)
+            text: "Test"
+            size_hint_y: None
+            height: 40
+            color: (0,0,0,1)
+            on_release: 
+                root.main_widget.getInputText()
+                root.main_widget.call_cpp_processor_test_input(root.main_widget.fa_data_dicts)
+            
+        Button:
+            text: "Close"
+            background_normal: ''
+            background_color: (0.65, 0.75, 0.65, 1)
+            size_hint_y: None
+            height: 40
+            color: (0,0,0,1)
+            on_press: 
+                root.dismiss()
+                app.root.get_screen("second").ids.fa_detail_widget_id.fa_data_dicts["toTestInput"] = False
+
+<RoundedButton@Button>:
+    background_color: (0,0,0,0)
+    background_normal: ''
+    canvas.before:
+        Color:
+            rgba: (0.65, 0.75, 0.65, 1) if self.state=='normal' else (0.65, 0.75, 0.65, 0.5)
+        RoundedRectangle: 
+            size: self.size
+            pos: (self.pos)
+            radius: [58]

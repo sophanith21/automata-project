@@ -95,6 +95,7 @@ public:
     // NFA to DFA Conversion Method
     // Returns a new FiniteAutomaton object representing the converted DFA
     optional<FiniteAutomaton> convertNfaToDfa() const;
+    std::optional<FiniteAutomaton> minimizeDfa() const; // DFA minimization
     void parsedSetOfStatesToState();
 
     // Getter methods for accessing private members
@@ -322,6 +323,171 @@ void FiniteAutomaton::parsedSetOfStatesToState()
     start_state_ = SetStateToState.at(start_state_);
 }
 
+// --- DFA Minimization Algorithm (Hopcroft's Algorithm, simplified) ---
+std::optional<FiniteAutomaton> FiniteAutomaton::minimizeDfa() const
+{
+    if (type_ != "DFA")
+    {
+        std::cerr << "Error: Minimization only applies to DFA." << std::endl;
+        return std::nullopt;
+    }
+    // 1. Separate accepting and non-accepting states
+    std::vector<std::string> accepting, non_accepting;
+    for (const auto &s : states_)
+    {
+        if (s.is_accepting)
+            accepting.push_back(s.name);
+        else
+            non_accepting.push_back(s.name);
+    }
+    // 2. Initial partition
+    std::vector<std::vector<std::string>> partitions;
+    if (!accepting.empty())
+        partitions.push_back(accepting);
+    if (!non_accepting.empty())
+        partitions.push_back(non_accepting);
+
+    // new implementation
+    std::map<std::string, int> state_to_partition;
+    for (size_t i = 0; i < partitions.size(); ++i)
+    {
+        for (const auto &s : partitions[i])
+        {
+            state_to_partition[s] = (int)i;
+        }
+    }
+
+    // 3. Refinement
+    bool changed = true;
+    while (changed)
+    {
+        changed = false;
+        std::vector<std::vector<std::string>> new_partitions;
+        for (const auto &group : partitions)
+        {
+            std::map<std::vector<int>, std::vector<std::string>> splitter;
+            for (const auto &state : group)
+            {
+                std::vector<int> sig;
+                for (const auto &symbol : alphabet_)
+                {
+                    std::pair<std::string, std::string> key = make_pair(state, symbol);
+                    if (transitions_map_.find(key) == transitions_map_.end())
+                    {
+                        std::cerr << "Error: Missing transition for state " << state << " and symbol " << symbol << std::endl;
+                        exit(1);
+                    }
+                    std::set<std::string> nextStates = transitions_map_.at(key);
+
+                    if (nextStates.size() != 1)
+                    {
+                        std::cerr << "Error: Transition for state " << state << " and symbol " << symbol << " is non-deterministic." << std::endl;
+                        exit(1);
+                    }
+                    std::string nextState = *(nextStates.begin());
+                    sig.push_back(state_to_partition[nextState]);
+                }
+                splitter[sig].push_back(state);
+            }
+            if (splitter.size() == 1)
+            {
+                new_partitions.push_back(group);
+            }
+            else
+            {
+                changed = true;
+                for (const auto &kv : splitter)
+                {
+                    new_partitions.push_back(kv.second);
+                }
+            }
+        }
+        partitions = new_partitions;
+
+        if (changed)
+        {
+            partitions = new_partitions;
+            state_to_partition.clear();
+            for (size_t i = 0; i < partitions.size(); ++i)
+            {
+                for (const auto &s : partitions[i])
+                {
+                    state_to_partition[s] = (int)i;
+                }
+            }
+        }
+    }
+    // 4. Build new minimized DFA with combined state names
+    std::vector<FAState> min_states;
+    std::vector<FATransition> min_transitions;
+    std::string min_start_state;
+
+    // Helper function to create combined state name
+    auto createCombinedStateName = [](const std::vector<std::string> &states)
+    {
+        std::vector<std::string> sorted_states = states;
+        std::sort(sorted_states.begin(), sorted_states.end());
+        std::string name = "[";
+        bool first = true;
+        for (const auto &s : sorted_states)
+        {
+            if (!first)
+                name += ",";
+            name += s;
+            first = false;
+        }
+        name += "]";
+        return name;
+    };
+
+    // Create states with combined names
+    for (size_t i = 0; i < partitions.size(); ++i)
+    {
+        bool is_accepting = false;
+        for (const auto &s : partitions[i])
+        {
+            if (std::find(accepting.begin(), accepting.end(), s) != accepting.end())
+            {
+                is_accepting = true;
+                break;
+            }
+        }
+        std::string state_name = createCombinedStateName(partitions[i]);
+        min_states.push_back({state_name, is_accepting});
+
+        // Check if this partition contains the original start state
+        if (std::find(partitions[i].begin(), partitions[i].end(), start_state_) != partitions[i].end())
+            min_start_state = state_name;
+    }
+
+    // Build transitions
+    for (size_t i = 0; i < partitions.size(); ++i)
+    {
+        std::string from_name = createCombinedStateName(partitions[i]);
+        const auto &representative = *partitions[i].begin(); // Use first state as representative
+
+        for (const auto &symbol : alphabet_)
+        {
+            auto it = transitions_map_.find({representative, symbol});
+            if (it != transitions_map_.end() && !it->second.empty())
+            {
+                std::string dest = *it->second.begin();
+                int dest_idx = state_to_partition[dest];
+                std::string to_name = createCombinedStateName(partitions[dest_idx]);
+
+                FATransition t;
+                t.from_state = from_name;
+                t.symbol = symbol;
+                t.to_state = to_name;
+                min_transitions.push_back(t);
+            }
+        }
+    }
+
+    // Return minimized DFA
+    return FiniteAutomaton(name_ + "_min", "DFA", min_start_state, min_states, alphabet_, min_transitions);
+}
+
 // --- Main NFA to DFA Conversion Algorithm (Subset Construction) ---
 optional<FiniteAutomaton> FiniteAutomaton::convertNfaToDfa() const
 {
@@ -334,6 +500,7 @@ optional<FiniteAutomaton> FiniteAutomaton::convertNfaToDfa() const
     string new_fa_name = name_ + "_DFA";
     string new_fa_type = "DFA";
     vector<string> dfa_alphabet = alphabet_;
+    std::sort(dfa_alphabet.begin(), dfa_alphabet.end());
 
     // Remove EPSILON_SYMBOL from DFA alphabet if it was present
     dfa_alphabet.erase(remove(dfa_alphabet.begin(), dfa_alphabet.end(), EPSILON_SYMBOL), dfa_alphabet.end());
@@ -492,7 +659,6 @@ int main()
     bool toConvertNFA = false;
     bool toTestInput = false;
     bool toMinimize = false;
-
     // Basic error handling for empty input
     if (json_input_str.empty())
     {
@@ -521,6 +687,7 @@ int main()
     toConvertNFA = parsed_json.at("toConvertNFA").get<bool>();
     toTestInput = parsed_json.at("toTestInput").get<bool>();
     toMinimize = parsed_json.at("toMinimize").get<bool>();
+    string input = parsed_json.at("Input").get<string>();
 
     // Create FiniteAutomaton object from parsed JSON
     optional<FiniteAutomaton> fa_opt = createAutomatonFromJson(parsed_json);
@@ -544,6 +711,51 @@ int main()
     output_json["original_fa_name"] = original_fa.getName();
     output_json["original_fa_type"] = original_fa.getType();
     output_json["message"] = "FA data successfully received and parsed by C++.";
+
+    if (original_fa.getType() == "DFA" && toMinimize)
+    {
+        std::cerr << "\n--- Attempting DFA Minimization ---" << std::endl;
+        std::optional<FiniteAutomaton> min_dfa_opt = original_fa.minimizeDfa();
+        if (min_dfa_opt)
+        {
+            FiniteAutomaton min_dfa = *min_dfa_opt;
+            std::cerr << "Minimization successful! Minimized DFA:" << std::endl;
+            min_dfa.printDefinition();
+            
+            // Prepare JSON output for the minimized DFA, matching the converted DFA structure
+            nlohmann::json min_fa_json;
+            nlohmann::json fa_header;
+            fa_header["name"] = min_dfa.getName();
+            fa_header["type"] = min_dfa.getType();
+            fa_header["start_state_name"] = min_dfa.getStartState();
+            fa_header["description"] = "Minimized DFA";
+
+            min_fa_json["fa_header"] = fa_header;
+            min_fa_json["fa_states"] = nlohmann::json(min_dfa.getStates());
+            min_fa_json["fa_symbols"] = min_dfa.getAlphabet();
+            min_fa_json["fa_transitions"] = nlohmann::json(min_dfa.getRawTransitionsList());
+
+            output_json["minimized_dfa"] = min_fa_json;
+            output_json["minimization_message"] = "DFA successfully minimized.";
+            // Output accepting and non-accepting states as arrays
+            std::vector<std::string> accepting_states, non_accepting_states;
+            for (const auto &s : min_dfa.getStates())
+            {
+                if (s.is_accepting)
+                    accepting_states.push_back(s.name);
+                else
+                    non_accepting_states.push_back(s.name);
+            }
+            output_json["accepting_states"] = accepting_states;
+            output_json["non_accepting_states"] = non_accepting_states;
+            
+        }
+        else
+        {
+            std::cerr << "DFA Minimization failed." << std::endl;
+            output_json["minimization_message"] = "DFA Minimization failed.";
+        }
+    }
 
     if (original_fa.getType() == "NFA" && toConvertNFA)
     {
@@ -574,19 +786,6 @@ int main()
             output_json["conversion_message"] = "NFA successfully converted to DFA.";
 
             // Example: Test the converted DFA
-            if (toTestInput)
-            {
-                cerr << "\n--- Testing Converted DFA ---" << endl;
-                string test_str1 = "a";
-                string test_str2 = "ab";
-                string test_str3 = "b";
-                string test_str4 = "aaabb";
-
-                cerr << "Test '" << test_str1 << "': " << (dfa_automaton.testInput(test_str1) ? "Accepted" : "Rejected") << endl;
-                cerr << "Test '" << test_str2 << "': " << (dfa_automaton.testInput(test_str2) ? "Accepted" : "Rejected") << endl;
-                cerr << "Test '" << test_str3 << "': " << (dfa_automaton.testInput(test_str3) ? "Accepted" : "Rejected") << endl;
-                cerr << "Test '" << test_str4 << "': " << (dfa_automaton.testInput(test_str4) ? "Accepted" : "Rejected") << endl;
-            }
         }
         else
         {
@@ -598,21 +797,22 @@ int main()
     {
         output_json["message"] = "Automaton is already a DFA. No conversion needed.";
         output_json["minimization_prompt"] = "DFA minimization logic would run here.";
+    }
 
-        // Test the existing DFA as well
-        if (toTestInput)
-        {
-            cerr << "\n--- Testing Original DFA ---" << endl;
-            string test_str1 = "a";
-            string test_str2 = "ab";
-            string test_str3 = "b";
-            string test_str4 = "aaabb";
+    if (toTestInput)
+    {
+        cerr << "\n--- Testing Original DFA ---" << endl;
+        string test_str1 = "a";
+        string test_str2 = "ab";
+        string test_str3 = "b";
+        string test_str4 = "aaabb";
 
-            cerr << "Test '" << test_str1 << "': " << (original_fa.testInput(test_str1) ? "Accepted" : "Rejected") << endl;
-            cerr << "Test '" << test_str2 << "': " << (original_fa.testInput(test_str2) ? "Accepted" : "Rejected") << endl;
-            cerr << "Test '" << test_str3 << "': " << (original_fa.testInput(test_str3) ? "Accepted" : "Rejected") << endl;
-            cerr << "Test '" << test_str4 << "': " << (original_fa.testInput(test_str4) ? "Accepted" : "Rejected") << endl;
-        }
+        cerr << "Test '" << test_str1 << "': " << (original_fa.testInput(test_str1) ? "Accepted" : "Rejected") << endl;
+        cerr << "Test '" << test_str2 << "': " << (original_fa.testInput(test_str2) ? "Accepted" : "Rejected") << endl;
+        cerr << "Test '" << test_str3 << "': " << (original_fa.testInput(test_str3) ? "Accepted" : "Rejected") << endl;
+        cerr << "Test '" << test_str4 << "': " << (original_fa.testInput(test_str4) ? "Accepted" : "Rejected") << endl;
+        output_json["test_output"] = original_fa.testInput(input) ? "Accepted" : "Rejected";
+        cerr << "Test '" << test_str4 << "': " << (original_fa.testInput(input) ? "Accepted" : "Rejected") << endl;
     }
 
     // Print the final JSON output to stdout. Python will capture this.

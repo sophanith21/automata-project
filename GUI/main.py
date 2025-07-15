@@ -1,3 +1,4 @@
+from kivy.uix.dropdown import ScrollView
 from kivy.uix.accordion import ListProperty
 from kivy.uix.gesturesurface import Vector
 from kivy.uix.accordion import Widget
@@ -19,11 +20,12 @@ from kivy.properties import StringProperty
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.label import Label
 from kivy.uix.popup import Popup
-from kivy.graphics import Color, Line
+from kivy.graphics import Color, Line, Rectangle
 from kivy.metrics import dp
+from kivy.uix.textinput import TextInput
 
 Window.maximize()
-
+Window.clearcolor = (1, 1, 1, 1)
 EPSILON_SYMBOL = "ep"  # Our chosen multi-character epsilon symbol
 
 
@@ -59,27 +61,97 @@ class FAListWidget(BoxLayout):
     def populate(self):
         app = App.get_running_app()
         self.clear_widgets()
+        title = Label(
+            text="LIST OF FINITE AUTOMATA",
+            bold=True,
+            color=(0, 0, 0, 1),
+            font_size=dp(35),
+            size_hint_y=None,
+            height=dp(70),
+        )
+        with title.canvas.before:
+            Color(0.65, 0.75, 0.65, 1)
+            self.rect_label = Rectangle(size=title.size, pos=title.pos)
+        title.bind(size=self._update_label_rect, pos=self._update_label_rect)
+        self.add_widget(title)
         if app.fa_headers:
+            scroll_view = ScrollView()
+            scroll_view.do_scroll = (False, True)
+            boxlayout = BoxLayout()
+            boxlayout.size_hint = (1, None)
+            boxlayout.height = dp(300)
+
+            boxlayout.orientation = "vertical"
+            another = BoxLayout()
+            another.orientation = "horizontal"
+            another.size_hint = (1, None)
+            another.height = dp(75)
+            label1 = Label(
+                text="Name",
+                color=(0, 0, 0, 1),
+            )
+            label2 = Label(
+                text="Type",
+                color=(0, 0, 0, 1),
+            )
+            label3 = Label(
+                text="Description",
+                color=(0, 0, 0, 1),
+            )
+            label4 = Label(
+                text="", color=(0, 0, 0, 1), size_hint=(None, 1), width=dp(100)
+            )
+            another.add_widget(label1)
+            another.add_widget(label2)
+            another.add_widget(label3)
+            another.add_widget(label4)
+            self.add_widget(another)
             for fa in app.fa_headers:
-                self.add_widget(FAWidget(fa))
+                boxlayout.add_widget(FAWidget(fa))
+            scroll_view.add_widget(boxlayout)
+            self.add_widget(scroll_view)
         layout = BoxLayout()
         layout.orientation = "horizontal"
+        layout.spacing = dp(60)
+
         button_1 = Button()
         button_1.text = "Define a new finite automaton"
+        button_1.color = (0, 0, 0, 1)
         button_1.on_release = self.button_1_pressed
+        button_1.size_hint = (None, None)
+        button_1.width = dp(300)
+        button_1.height = dp(70)
+        button_1.pos_hint = {"center_x": 0.5, "center_y": 0.5}
+        button_1.background_color = (0.65, 0.75, 0.65, 1)
+        button_1.background_normal = ""
+
         button_2 = Button()
+        button_2.color = (0, 0, 0, 1)
+        button_2.background_normal = ""
         button_2.text = "Refresh"
+        button_2.size_hint = (None, None)
+        button_2.background_color = (0.65, 0.75, 0.65, 1)
+        button_2.width = dp(300)
+        button_2.height = dp(70)
+        button_2.pos_hint = {"center_x": 1, "center_y": 0.5}
         button_2.on_release = lambda: (app.update_fa_list_widget(),)
+        layout.add_widget(Widget())
         layout.add_widget(button_1)
         layout.add_widget(button_2)
+        layout.add_widget(Widget())
         self.add_widget(layout)
 
     def button_1_pressed(self):
         app = App.get_running_app()
         app.root.current = "design_fa"
 
+    def _update_label_rect(self, instance, value):
+        self.rect_label.pos = instance.pos
+        self.rect_label.size = instance.size
+
 
 from kivy.uix.relativelayout import RelativeLayout
+
 
 class Drawing(Widget):
     fa_data_dicts = DictProperty(
@@ -166,6 +238,7 @@ class Drawing(Widget):
 
     def draw_connection(self, from_state, symbol, to_state):
         with self.canvas:
+            Color(0, 0, 0, 1)
             if from_state["name"] != to_state["name"]:
                 from_pos = from_state["pos"]
                 to_pos = to_state["pos"]
@@ -199,7 +272,7 @@ class Drawing(Widget):
                     dist_between = from_pos.distance(to_pos)
                     control_offset = dist_between / 4
                     control_point = mid_point + perp_vec * control_offset
-
+                    Color(0, 0, 0, 1)
                     Line(
                         bezier=(
                             from_pos_adj.x,
@@ -216,6 +289,7 @@ class Drawing(Widget):
                     )
                 else:
                     # Draw a straight line
+                    Color(0, 0, 0, 1)
                     Line(
                         points=(
                             from_pos_adj.x,
@@ -247,8 +321,9 @@ class Drawing(Widget):
                     -angle
                 )
                 p2 = Vector(p2_x, p2_y).normalize() * arrow_len + to_pos_adj
-
+                Color(0, 0, 0, 1)
                 Line(points=(to_pos_adj.x, to_pos_adj.y, p1.x, p1.y))
+                Color(0, 0, 0, 1)
                 Line(points=(to_pos_adj.x, to_pos_adj.y, p2.x, p2.y))
 
                 if self.is_overlap(self.occupied_coordinate, symbol_pos):
@@ -260,6 +335,7 @@ class Drawing(Widget):
                 Symbol.text = symbol
                 Symbol.size_hint = (None, None)
                 Symbol.font_size = dp(20)
+                Symbol.color = (0, 0, 0, 1)
                 Symbol.pos = Vector(
                     symbol_pos.x - Symbol.width / 2, symbol_pos.y - Symbol.height / 2
                 )
@@ -276,7 +352,7 @@ class Drawing(Widget):
                 ellipse_height = self.radius + self.gap / 5
                 angle_start = 120
                 angle_end = -120
-
+                Color(0, 0, 0, 1)
                 Line(
                     ellipse=(
                         ellipse_bbox_x,
@@ -300,6 +376,7 @@ class Drawing(Widget):
                 Symbol.text = symbol
                 Symbol.size_hint = (None, None)
                 Symbol.font_size = dp(20)
+                Symbol.color = (0, 0, 0, 1)
                 Symbol.pos = Vector(
                     symbol_pos.x - Symbol.width / 2, symbol_pos.y - Symbol.height / 2
                 )
@@ -320,12 +397,15 @@ class Drawing(Widget):
         self.transitions = self.fa_data_dicts["fa_transitions"]
         self.extrapolate()
         with self.canvas:
+            Color(0, 0, 0, 1)
             for state in self.extrapolated_map:
+                Color(0, 0, 0, 1)
                 Line(
                     circle=(state["pos"].x, state["pos"].y, self.radius),
                     width=self.width,
                 )
                 if state["is_accepting"] == 1:
+                    Color(0, 0, 0, 1)
                     Line(
                         circle=(state["pos"].x, state["pos"].y, self.radius - 10),
                         width=self.width,
@@ -337,7 +417,7 @@ class Drawing(Widget):
                     state["pos"].y - my_label.height / 2,
                 )
                 my_label.font_size = self.font_size
-
+                my_label.color = (0, 0, 0, 1)
                 self.add_widget(my_label)
 
             for transition in self.transitions:
@@ -363,8 +443,10 @@ class FADetailWidget(BoxLayout):
             "toTestInput": False,
             "toConvertNFA": False,
             "toMinimize": False,
+            "Input": "",
         }
     )
+    test_output = StringProperty("Result")
 
     def call_cpp_processor(self, fa_data_dict):
         script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -394,10 +476,67 @@ class FADetailWidget(BoxLayout):
                     parsed_fa_data = json.loads(result.stdout)
                     print("\n--- Parsed FA Data (from C++) in Python ---")
                     print(json.dumps(parsed_fa_data, indent=4))
-                    self.fa_data_dicts = parsed_fa_data["converted_dfa"]
+                    if self.fa_data_dicts["toConvertNFA"] == True:
+                        self.fa_data_dicts = parsed_fa_data["converted_dfa"]
+                    else:
+                        self.fa_data_dicts = parsed_fa_data["minimized_dfa"]
+
                     self.fa_data_dicts["toTestInput"] = False
                     self.fa_data_dicts["toConvertNFA"] = False
                     self.fa_data_dicts["toMinimize"] = False
+                    self.print_data()
+                except json.JSONDecodeError as e:
+                    print(f"Error decoding JSON from C++ stdout: {e}")
+                    print(f"Raw C++ stdout: {result.stdout}")
+                    return None
+            else:
+                print("C++ program produced no stdout.")
+                return None
+
+        except FileNotFoundError:
+            print(f"Error: C++ executable '{cpp_executable}' not found.")
+            print("Please ensure it's compiled and in the same directory.")
+            return None
+        except subprocess.CalledProcessError as e:
+            print(f"C++ program failed with exit code {e.returncode}")
+            print(f"Stdout:\n{e.stdout}")
+            print(f"Stderr:\n{e.stderr}")
+            return None
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+            return None
+
+    def call_cpp_processor_test_input(self, fa_data_dict):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        repo_root = os.path.abspath(os.path.join(script_dir, ".."))
+        cpp_executable = os.path.join(repo_root, "src", "cpp", "fa_processor.exe")
+        json_input_string = json.dumps(fa_data_dict)
+
+        try:
+            result = subprocess.run(
+                [cpp_executable],
+                input=json_input_string,  # Send JSON via stdin
+                capture_output=True,  # Capture stdout and stderr
+                text=True,  # Decode output as text (UTF-8 by default)
+                check=True,  # Raise CalledProcessError if C++ returns non-zero exit code
+            )
+
+            if result.stderr:
+                print("\n--- C++ STDERR Output ---")
+                print(result.stderr)
+                print("-------------------------\n")
+
+            if result.stdout:
+                print("--- C++ Output (JSON) ---")
+                # print(result.stdout) # Raw output for debugging
+                try:
+                    # Parse the JSON output from C++
+                    parsed_fa_data = json.loads(result.stdout)
+                    print("\n--- Parsed FA Data (from C++) in Python ---")
+                    print(json.dumps(parsed_fa_data, indent=4))
+
+                    self.test_output = parsed_fa_data["test_output"]
+                    self.popUp.ids.result.text = self.test_output
                     self.print_data()
                 except json.JSONDecodeError as e:
                     print(f"Error decoding JSON from C++ stdout: {e}")
@@ -451,63 +590,131 @@ class FADetailWidget(BoxLayout):
 
         cursor.execute(sql_query_transitions, (app.selected_fa_id,))
         self.fa_data_dicts["fa_transitions"] = cursor.fetchall()
+        self.fa_data_dicts["Input"] = ""
         name = Label()
-        name.text = "Name: " + ", ".join(
-            [s["name"] for s in self.fa_data_dicts["fa_header"]]
+        name.valign = "center"
+        name.text_size = (None, name.height)
+        name.bold = True
+        name.text = "Finite Automaton: " + "".join(
+            [f"[ {s["name"]} ]" for s in self.fa_data_dicts["fa_header"]]
         )
+        name.color = (0, 0, 0, 1)
+        name.size_hint = (1, None)
+        name.font_size = dp(30)
+        with name.canvas.before:
+            Color(0.65, 0.75, 0.65, 1)
+            self.rect_label = Rectangle(size=name.size, pos=name.pos)
+        name.bind(size=self._update_label_rect, pos=self._update_label_rect)
+
         type = Label()
+        type.font_size = dp(20)
         type.text = "Type: " + ", ".join(
             [s["type"] for s in self.fa_data_dicts["fa_header"]]
         )
+        type.color = (0, 0, 0, 1)
+        type.valign = "top"
+        type.text_size = (None, type.height)
+
         symbols = Label()
+        symbols.font_size = dp(20)
         symbols.text = "Symbols: " + ", ".join(
             [s["symbol_char"] for s in self.fa_data_dicts["fa_symbols"]]
         )
+        symbols.color = (0, 0, 0, 1)
+        symbols.valign = "top"
+        symbols.text_size = (None, symbols.height)
+
         start_state = Label()
-        start_state.text = "Start State(s): " + ", ".join(
+        start_state.font_size = dp(20)
+        start_state.text = "Start State: " + ", ".join(
             [s["start_state_name"] for s in self.fa_data_dicts["fa_header"]]
         )
+        start_state.color = (0, 0, 0, 1)
+        start_state.valign = "top"
+        start_state.text_size = (None, start_state.height)
+
         states = Label()
+        states.font_size = dp(20)
         states.text = "States: " + ", ".join(
             [s["name"] for s in self.fa_data_dicts["fa_states"]]
         )
+        states.color = (0, 0, 0, 1)
+        states.valign = "top"
+        states.text_size = (None, states.height)
+
         transitions = Label()
-        transitions.text = "Transition: " + ", ".join(
+        transitions.font_size = dp(20)
+        transitions.valign = "top"
+        transitions.text_size = (None, transitions.height)
+        transitions.text = "Transition " + "".join(
             [
-                f"{t['from_state_name']} - {t['symbol_char']} > {t['to_state_name']}"
+                f"\n{t['from_state_name']} -- ({t['symbol_char']}) -> {t['to_state_name']}"
                 for t in self.fa_data_dicts["fa_transitions"]
             ]
         )
+        transitions.color = (0, 0, 0, 1)
+
         self.add_widget(name)
-        self.add_widget(type)
-        self.add_widget(symbols)
-        self.add_widget(start_state)
-        self.add_widget(states)
-        self.add_widget(transitions)
+        layout1 = BoxLayout(orientation="horizontal")
+        layout1.add_widget(type)
+        layout1.add_widget(symbols)
+        layout1.add_widget(start_state)
+        layout1.add_widget(states)
+        layout1.add_widget(transitions)
+        self.add_widget(layout1)
         self.add_widget(Drawing(self.fa_data_dicts))
+
         layout = BoxLayout()
         test_input = Button()
+        test_input.font_size = dp(20)
+        test_input.size_hint = (1, 0.5)
+        test_input.pos_hint = {"center_x": 0, "center_y": 0.5}
+
         test_input.text = "Test Input"
+        test_input.color = (0, 0, 0, 1)
+        test_input.background_normal = ""
+        test_input.background_color = (0.65, 0.75, 0.65, 1)
 
         test_input.on_release = self.test_input_button
 
         convertNFA = Button()
+        convertNFA.font_size = dp(20)
+        convertNFA.size_hint = (1, 0.5)
+        convertNFA.pos_hint = {"center_x": 0, "center_y": 0.5}
         convertNFA.text = "Convert to DFA"
-
+        convertNFA.color = (0, 0, 0, 1)
+        convertNFA.background_normal = ""
+        convertNFA.background_color = (0.65, 0.75, 0.65, 1)
         convertNFA.on_release = self.convertNFA_button
 
         minimization = Button()
+        minimization.font_size = dp(20)
+        minimization.size_hint = (1, 0.5)
+        minimization.pos_hint = {"center_x": 0, "center_y": 0.5}
         minimization.text = "Minimization"
-
+        minimization.color = (0, 0, 0, 1)
+        minimization.background_normal = ""
+        minimization.background_color = (0.65, 0.75, 0.65, 1)
         minimization.on_release = self.minimization_button
 
         back = Button()
+        back.font_size = dp(20)
+        back.size_hint = (1, 0.5)
+        back.pos_hint = {"center_x": 0, "center_y": 0.5}
         back.text = "Back"
-
+        back.color = (0, 0, 0, 1)
+        back.background_normal = ""
+        back.background_color = (0.65, 0.75, 0.65, 1)
         back.on_release = self.back_button
 
         delete = Button()
+        delete.font_size = dp(20)
+        delete.size_hint = (1, 0.5)
+        delete.pos_hint = {"center_x": 0, "center_y": 0.5}
         delete.text = "Delete"
+        delete.color = (0, 0, 0, 1)
+        delete.background_normal = ""
+        delete.background_color = (0.65, 0.75, 0.65, 1)
         delete.on_release = self.delete_button
 
         layout.add_widget(test_input)
@@ -515,15 +722,21 @@ class FADetailWidget(BoxLayout):
         layout.add_widget(minimization)
         layout.add_widget(delete)
         layout.add_widget(back)
+        layout.padding = dp(50)
+        layout.spacing = dp(20)
         self.add_widget(layout)
+
+    def _update_label_rect(self, instance, value):
+        self.rect_label.pos = instance.pos
+        self.rect_label.size = instance.size
 
     def print_data(self):
         print(json.dumps(self.fa_data_dicts, indent=4))
 
     def test_input_button(self):
-        self.fa_data_dicts["toTestinput"] = (True,)
+        self.fa_data_dicts["toTestInput"] = True
         self.print_data(),
-        self.call_cpp_processor(self.fa_data_dicts)
+        self.popUpScreenTestInput()
 
     def convertNFA_button(self):
         if self.fa_data_dicts["fa_header"][0]["type"] == "NFA":
@@ -535,15 +748,35 @@ class FADetailWidget(BoxLayout):
             message = Popup()
             message.title = "Important"
             message.size_hint = (0.6, 0.6)
+            message.size_hint = (None, None)
+            message.size = (dp(400), dp(250))
+            message.separator_color = (0.65, 0.75, 0.65, 1)
+
             text = Label()
             text.text = "This Finite Automaton is already a DFA"
-            text.font_size = "46dp"
+            text.font_size = "20dp"
             message.add_widget(text)
             message.open()
 
     def minimization_button(self):
-        self.fa_data_dicts["toMinimize"] = True
-        self.print_data()
+        if self.fa_data_dicts["fa_header"][0]["type"] != "NFA":
+            self.fa_data_dicts["toMinimize"] = True
+            self.call_cpp_processor(self.fa_data_dicts)
+            self.print_data()
+            self.update_display()
+        else:
+            message = Popup()
+            message.title = "Important"
+            message.size_hint = (0.6, 0.6)
+            message.size_hint = (None, None)
+            message.size = (dp(400), dp(250))
+            message.separator_color = (0.65, 0.75, 0.65, 1)
+
+            text = Label()
+            text.text = "This Finite Automaton need to be a DFA"
+            text.font_size = "20dp"
+            message.add_widget(text)
+            message.open()
 
     def back_button(self):
         app = App.get_running_app()
@@ -568,94 +801,150 @@ class FADetailWidget(BoxLayout):
         self.populate()
 
     def save_database_button(self):
+        self.popUpscreen()
+
+    def popUpscreen(self):
+        self.popUp = Factory.popUpScreen()
+        self.popUp.main_widget = self
+        self.popUp.open()
+
+    def popUpScreenTestInput(self):
+        self.popUp = Factory.popUpScreenTestInput()
+        self.popUp.main_widget = self
+        self.popUp.open()
+
+    def getFaInfoFromPopUp(self):
+        if hasattr(self, "popUp"):
+            if self.popUp.ids.faNameInput.text:
+                self.fa_data_dicts["fa_header"][
+                    "name"
+                ] = self.popUp.ids.faNameInput.text
+            else:
+                self.fa_data_dicts["fa_header"]["name"] = "Placeholder"
+            if self.popUp.ids.descriptionInput.text:
+                self.fa_data_dicts["fa_header"][
+                    "description"
+                ] = self.popUp.ids.descriptionInput.text
+            else:
+                self.fa_data_dicts["fa_header"]["description"] = "Placeholder"
+
+    def getInputText(self):
+        if hasattr(self, "popUp"):
+            self.fa_data_dicts["Input"] = self.popUp.ids.faNameInput.text
+
+    def saveToDatabase(self):
         app = App.get_running_app()
         cursor = app.db_cursor
-        cursor.execute(
-            "insert into fa_headers (name,type,start_state_name,description) values (%s,%s,%s,%s)",
-            (
-                self.fa_data_dicts["fa_header"]["name"],
-                self.fa_data_dicts["fa_header"]["type"],
-                self.fa_data_dicts["fa_header"]["start_state_name"],
-                "A converted DFA converted from an NFA",
-            ),
-        )
-        fa_id = cursor.lastrowid
-        for state in self.fa_data_dicts["fa_states"]:
+        try:
             cursor.execute(
-                "Insert into fa_states (fa_id,name,is_accepting) values (%s,%s,%s)",
-                (fa_id, state["name"], state["is_accepting"]),
-            )
-        for symbol in self.fa_data_dicts["fa_symbols"]:
-            cursor.execute(
-                "insert into fa_symbols (fa_id,symbol_char) values (%s,%s)",
-                (fa_id, symbol),
-            )
-
-        for transition in self.fa_data_dicts["fa_transitions"]:
-            cursor.execute(
-                "insert into fa_transitions (fa_id,from_state_name,symbol_char,to_state_name) values (%s,%s,%s,%s)",
+                "insert into fa_headers (name,type,start_state_name,description) values (%s,%s,%s,%s)",
                 (
-                    fa_id,
-                    transition["from_state_name"],
-                    transition["symbol_char"],
-                    transition["to_state_name"],
+                    self.fa_data_dicts["fa_header"]["name"],
+                    self.fa_data_dicts["fa_header"]["type"],
+                    self.fa_data_dicts["fa_header"]["start_state_name"],
+                    "A converted DFA converted from an NFA",
                 ),
             )
-        app.db_connection.commit()
+            fa_id = cursor.lastrowid
+            for state in self.fa_data_dicts["fa_states"]:
+                cursor.execute(
+                    "Insert into fa_states (fa_id,name,is_accepting) values (%s,%s,%s)",
+                    (fa_id, state["name"], state["is_accepting"]),
+                )
+            for symbol in self.fa_data_dicts["fa_symbols"]:
+                cursor.execute(
+                    "insert into fa_symbols (fa_id,symbol_char) values (%s,%s)",
+                    (fa_id, symbol),
+                )
 
-        message = Popup()
-        message.auto_dismiss = False
-        message.title = "Important"
-        message.size_hint = (0.6, 0.6)
-        text = Label()
-        text.text = "Successfully saved the automaton to the database. \nNavigate to:"
-        text.font_size = "33dp"
-        button1 = Button()
-        button1.text = "FA List"
-        button1.on_release = lambda: (self.back_button(), message.dismiss())
-        button2 = Button()
-        button2.text = "The saved automaton"
-        button2.on_release = lambda: (
-            self.open_the_save_automaton(fa_id),
-            message.dismiss(),
-        )
+            for transition in self.fa_data_dicts["fa_transitions"]:
+                cursor.execute(
+                    "insert into fa_transitions (fa_id,from_state_name,symbol_char,to_state_name) values (%s,%s,%s,%s)",
+                    (
+                        fa_id,
+                        transition["from_state_name"],
+                        transition["symbol_char"],
+                        transition["to_state_name"],
+                    ),
+                )
+            app.db_connection.commit()
+            message = Popup()
+            message.auto_dismiss = False
+            message.title = "Important"
+            message.size_hint = (0.6, 0.6)
+            text = Label()
+            text.text = (
+                "Successfully saved the automaton to the database. \nNavigate to:"
+            )
+            text.font_size = "33dp"
+            button1 = Button()
+            button1.text = "FA List"
+            button1.on_release = lambda: (self.back_button(), message.dismiss())
+            button2 = Button()
+            button2.text = "The saved automaton"
+            button2.on_release = lambda: (
+                self.open_the_save_automaton(fa_id),
+                message.dismiss(),
+            )
 
-        layout = BoxLayout()
-        layout.orientation = "vertical"
-        layout.add_widget(text)
-        layout.add_widget(button1)
-        layout.add_widget(button2)
+            layout = BoxLayout()
+            layout.orientation = "vertical"
+            layout.add_widget(text)
+            layout.add_widget(button1)
+            layout.add_widget(button2)
 
-        message.add_widget(layout)
-        message.open()
+            message.add_widget(layout)
+            message.open()
+
+        except mysql.connector.Error as err:
+            print(f"Error: {err}")
+            message = Popup()
+            message.title = "Error"
+            message.size_hint = (0.6, 0.6)
+            text = Label()
+            text.text = "The FA name has already been used.\nPlease make sure your FA name is unique"
+            text.font_size = "33dp"
+
+            message.add_widget(text)
+            message.open()
 
     def update_display(self):
         self.clear_widgets()
+        fa_header_data = self.fa_data_dicts["fa_header"]
+        if isinstance(fa_header_data, list):
+            if not fa_header_data:
+                return
+            fa_header_data = fa_header_data[0]
+        fa_symbols_data = self.fa_data_dicts["fa_symbols"]
+        if fa_symbols_data and isinstance(fa_symbols_data[0], dict):
+            symbols_list = [s["symbol_char"] for s in fa_symbols_data]
+        else:
+            symbols_list = fa_symbols_data
         name = Label()
-        name.text = (
-            "Name: " + self.fa_data_dicts["fa_header"]["name"]
-        )  # cpp send fa_header in dict not array
+        name.text = "Name: " + fa_header_data["name"]
+        name.color = (0, 0, 0, 1)
         type = Label()
-        type.text = "Type: " + self.fa_data_dicts["fa_header"]["type"]
+        type.text = "Type: " + fa_header_data["type"]
+        type.color = (0, 0, 0, 1)
         symbols = Label()
-        symbols.text = "Symbols: " + ", ".join(
-            [s for s in self.fa_data_dicts["fa_symbols"]]
-        )
+        symbols.text = "Symbols: " + ", ".join(symbols_list)
+        symbols.color = (0, 0, 0, 1)
         start_state = Label()
-        start_state.text = (
-            "Start State: " + self.fa_data_dicts["fa_header"]["start_state_name"]
-        )
+        start_state.text = "Start State: " + fa_header_data["start_state_name"]
+        start_state.color = (0, 0, 0, 1)
         states = Label()
         states.text = "States: " + ", ".join(
             [s["name"] for s in self.fa_data_dicts["fa_states"]]
         )
+        states.color = (0, 0, 0, 1)
         transitions = Label()
-        transitions.text = "Transition: " + ", ".join(
+        transitions.text = "Transition " + ", ".join(
             [
-                f"{t['from_state_name']} - {t['symbol_char']} > {t['to_state_name']}"
+                f"{t['from_state_name']} -- ({t['symbol_char']}) -> {t['to_state_name']}"
                 for t in self.fa_data_dicts["fa_transitions"]
             ]
         )
+        transitions.color = (0, 0, 0, 1)
         self.add_widget(name)
         self.add_widget(type)
         self.add_widget(symbols)
@@ -665,16 +954,20 @@ class FADetailWidget(BoxLayout):
         layout = BoxLayout()
         save_database = Button()
         save_database.text = "Save to Database"
-
+        save_database.color = (0, 0, 0, 1)
+        save_database.background_normal = ""
+        save_database.background_color = (0.65, 0.75, 0.65, 1)
         save_database.on_release = self.save_database_button
-
         back_nfa = Button()
-        back_nfa.text = "Back to NFA"
-
+        back_nfa.text = "Stop Previewing"
+        back_nfa.color = (0, 0, 0, 1)
+        back_nfa.background_normal = ""
+        back_nfa.background_color = (0.65, 0.75, 0.65, 1)
         back_nfa.on_release = self.back_nfa_button
-
         layout.add_widget(save_database)
         layout.add_widget(back_nfa)
+        layout.padding = dp(30)
+        layout.spacing = dp(50)
         self.add_widget(layout)
 
 
@@ -756,8 +1049,11 @@ class DesignFaScreen(Screen):
 
     def run_designfa_function(self):
         try:
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            repo_root = os.path.abspath(os.path.join(script_dir, ".."))
+            cpp_executable = os.path.join(repo_root, "src", "cpp", "check_fa_type.exe")
             checkFaType = subprocess.run(
-                ["./designFaFunction"],
+                cpp_executable,
                 input=json.dumps(self.input_data).encode("utf-8"),
                 capture_output=True,
                 shell=False,
@@ -771,9 +1067,6 @@ class DesignFaScreen(Screen):
             )
         except Exception as e:
             print(f"Error running designfa Function: {e}")
-
-        # with open("inputData.json", "w") as f:
-        #     json.dump(self.input_data, f, indent=4)
 
     def on_submit(self):
         self.get_inputs()
