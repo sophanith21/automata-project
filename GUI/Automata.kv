@@ -6,14 +6,14 @@ WindowManager:
         
         BoxLayout:
             orientation: 'vertical'
-            padding: dp(200)
+            padding: [dp(200),0,dp(200),0]
             Label:
                 text: 'Welcome to Automata Processor'
                 font_size: dp(75)
                 color: (0,0,0,1)
                 bold: True
             RoundedButton:
-                text: 'See your defined finite automatas'
+                text: 'See Your Finite Automata'
                 color: (0, 0, 0, 1) if self.state=='normal' else (0,0,0,0.5)
                 size_hint: (None,None)
                 height: dp(100)
@@ -23,7 +23,33 @@ WindowManager:
                 on_release: 
                     app.update_fa_list_widget()
                     app.root.current = 'first'
-    
+            BoxLayout:
+                padding: [0,dp(200),0,0]
+                Label:
+                    text: 'Course: Automata (SEG1)'
+                    color: (0,0,0,1)
+                    text_size: (None,self.width)
+                    valign: 'top'
+                    font_size: dp(20)
+                Label:
+                    text: 'Lecturer: Phov Phannet'
+                    color: (0,0,0,1)
+                    text_size: (None,self.width)
+                    valign: 'top'
+                    font_size: dp(20)
+                Label:
+                    text: 'Team: 02'
+                    color: (0,0,0,1)
+                    text_size: (None,self.width)
+                    valign: 'top'
+                    font_size: dp(20)
+                Label:
+                    text: 'Members: Meas Sophanith\n                    Mao Sothyda\n                    Muong GekHeang\n                    Pich Sokreaksa\n                    Hoeurng Monica'
+                    color: (0,0,0,1)
+                    text_size: (None,self.width)
+                    valign: 'top'
+                    font_size: dp(20)
+
     FirstWindow: 
         
     DesignFaScreen:
