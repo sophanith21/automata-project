@@ -162,24 +162,48 @@ bool FiniteAutomaton::testInput(const string &input_string) const
 {
     if (type_ != "DFA")
     {
-        cerr << "Warning: testInput is currently only accurate for DFA type. "
-             << "This automaton is of type " << type_ << "." << endl;
-        return false; // Indicate not implemented for NFA behavior
+        std::set<std::string> current_nfa_states = getEpsilonClosure({start_state_});
+
+        if (current_nfa_states.empty())
+        {
+            return false;
+        }
+
+        // 2. Process input symbols
+        for (char symbol_char : input_string)
+        {
+            std::string symbol(1, symbol_char); // Convert char to string
+
+            // Calculate states reachable after consuming 'symbol' from the current set of NFA states
+            std::set<std::string> states_after_move = move(current_nfa_states, symbol);
+
+            // Apply epsilon closure to the newly reached states
+            current_nfa_states = getEpsilonClosure(states_after_move);
+
+            // If the set of current states becomes empty, it means no path exists for the rest of the string
+            if (current_nfa_states.empty())
+            {
+                return false;
+            }
+        }
+        return containsAcceptingStateForSet(current_nfa_states);
+    } else {
+        string current_state = start_state_;
+        for (char symbol_char : input_string)
+        {
+            string symbol(1, symbol_char); // Convert char to string
+            auto it = transitions_map_.find({current_state, symbol});
+            if (it == transitions_map_.end() || it->second.empty())
+            {
+                return false; // No transition or dead end
+            }
+            // For DFA, there should be exactly one next state
+            current_state = *it->second.begin();
+        }
+        return isAcceptingState(current_state);
     }
 
-    string current_state = start_state_;
-    for (char symbol_char : input_string)
-    {
-        string symbol(1, symbol_char); // Convert char to string
-        auto it = transitions_map_.find({current_state, symbol});
-        if (it == transitions_map_.end() || it->second.empty())
-        {
-            return false; // No transition or dead end
-        }
-        // For DFA, there should be exactly one next state
-        current_state = *it->second.begin();
-    }
-    return isAcceptingState(current_state);
+    
 }
 
 void FiniteAutomaton::printDefinition() const

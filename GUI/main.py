@@ -144,6 +144,7 @@ class FAListWidget(BoxLayout):
     def button_1_pressed(self):
         app = App.get_running_app()
         app.root.current = "design_fa"
+        app.root.transition.direction = "left"
 
     def _update_label_rect(self, instance, value):
         self.rect_label.pos = instance.pos
@@ -644,8 +645,6 @@ class FADetailWidget(BoxLayout):
 
         transitions = Label()
         transitions.font_size = dp(20)
-        transitions.valign = "top"
-        transitions.text_size = (None, transitions.height)
         transitions.text = "Transition " + "".join(
             [
                 f"\n{t['from_state_name']} -- ({t['symbol_char']}) -> {t['to_state_name']}"
@@ -653,6 +652,7 @@ class FADetailWidget(BoxLayout):
             ]
         )
         transitions.color = (0, 0, 0, 1)
+        transitions.pos = states.pos
 
         self.add_widget(name)
         layout1 = BoxLayout(orientation="horizontal")
