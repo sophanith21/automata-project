@@ -1022,7 +1022,7 @@ class DesignFaScreen(Screen):
                 row = Factory.TransitionTableRow()
                 row.ids.stateLabel.text = state
                 row.ids.symbolLabel.text = symbol
-                row.ids.transitionLabel.hint_text = f"{state} , {symbol} = ?"
+                row.ids.transitionLabel.hint_text = "e.g. q1 or q1,q2"
                 row.index = idx
                 self.ids.transition_table_container.add_widget(row)
         except ValueError as e:
@@ -1051,7 +1051,7 @@ class DesignFaScreen(Screen):
             if state not in transitions:
                 transitions[state] = {}
 
-            transitions[state][symbol] = [nextState]
+            transitions[state][symbol] = [s.strip() for s in nextState.split(",")]
 
         print("Number of State is: ", len(self.states))
         print("Number of symbols is: ", len(self.symbols))
@@ -1156,14 +1156,7 @@ class DesignFaScreen(Screen):
             for state, transitions in self.input_data["transitions"].items():
                 for symbol, nextStates in transitions.items():
                     for nextState in nextStates:
-                        if "," in nextState:
-                            splitStates = nextState.split(",")
-                            for splitState in splitStates:
-                                mycursor.execute(
-                                    "INSERT INTO fa_transitions (fa_id, from_state_name, symbol_char, to_state_name) VALUES (%s, %s, %s, %s)",
-                                    (faId, state, symbol, splitState.strip()),
-                                )
-                        else:
+                        if nextState != "-":
                             mycursor.execute(
                                 "INSERT INTO fa_transitions (fa_id, from_state_name, symbol_char, to_state_name) VALUES (%s, %s, %s, %s)",
                                 (faId, state, symbol, nextState),
