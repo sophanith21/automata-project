@@ -1,4 +1,4 @@
-from kivy.uix.dropdown import ScrollView
+from kivy.uix.scrollview import ScrollView
 from kivy.uix.accordion import ListProperty
 from kivy.uix.gesturesurface import Vector
 from kivy.uix.accordion import Widget
@@ -169,9 +169,8 @@ class Drawing(Widget):
     diameter = NumericProperty(dp(75))
     radius = NumericProperty(dp(75) / 2)
     gap = NumericProperty(dp(100))
-    current_pos = ObjectProperty(Vector(dp(150), dp(400)))
     font_size = NumericProperty(dp(75) / 5)
-    width = NumericProperty(dp(1))
+    line_width = NumericProperty(dp(1))
     transitions = ()
     fa_header = ListProperty()
     fa_states = ListProperty()
@@ -181,43 +180,59 @@ class Drawing(Widget):
 
     def extrapolate(self):
         go_right = True
-        height = Window.height
-        width = Window.width
-        for i in range(len(self.fa_states)):
+        layout_pos = Vector(dp(150), dp(150))
+        max_x = 0
+        max_y = 0
+        step = self.gap * 2 + self.radius
+        layout_width = Window.width
+
+        for state in self.fa_states:
             temp = {
-                "name": self.fa_states[i]["name"],
-                "pos": Vector(self.current_pos.x, height - self.current_pos.y),
-                "is_accepting": self.fa_states[i]["is_accepting"],
+                "name": state["name"],
+                "pos": Vector(layout_pos.x, layout_pos.y),
+                "is_accepting": state["is_accepting"],
             }
             self.extrapolated_map.append(temp)
-            if (
-                self.current_pos.x + (self.gap * 2) + self.radius < Window.width
-                and go_right
-            ):
-                self.current_pos.x = self.current_pos.x + self.gap * 2 + self.radius
-            elif (
-                height - self.current_pos.y + self.gap * 2 + self.radius > 0
-                and go_right
-            ):
-                self.current_pos.y = self.current_pos.y + self.gap * 2 + self.radius
-                go_right = False
-            elif self.current_pos.x - (self.gap * 2) + self.radius > 0 and not go_right:
-                self.current_pos.x = self.current_pos.x - (self.gap * 2) - self.radius
-            elif (
-                height - self.current_pos.y + self.gap * 2 + self.radius > 0
-                and not go_right
-            ):
-                self.current_pos.y = self.current_pos.y + self.gap * 2 + self.radius
-                go_right = True
+
+            max_x = max(max_x, layout_pos.x)
+            max_y = max(max_y, layout_pos.y)
+
+            if go_right:
+                if layout_pos.x + step < layout_width:
+                    layout_pos.x += step
+                else:
+                    layout_pos.y += step
+                    go_right = False
+            else:
+                if layout_pos.x - step > 0:
+                    layout_pos.x -= step
+                else:
+                    layout_pos.y += step
+                    go_right = True
+
+        padding = dp(150)
+        self.width = max_x + self.radius + padding
+        self.height = max_y + self.radius + padding
+
+        # Convert positions from top-left origin to Kivy's bottom-left origin for drawing.
+        for state in self.extrapolated_map:
+            state["pos"].y = self.height - state["pos"].y
 
         print(json.dumps(self.extrapolated_map, indent=4))
 
     def is_overlap(self, data, pos):
         for i in data:
-            while (i.x <= pos.x + 10 and i.x >= pos.x - 10) and (
-                i.y <= pos.y + 10 and i.y >= pos.y - 10
+            while (i.x <= pos.x + 25 and i.x >= pos.x - 25) and (
+                i.y <= pos.y + 25 and i.y >= pos.y - 25
             ):
-                pos.y -= 10
+                pos.x += 10
+        return False
+
+    def is_line_drawn(self, from_pos, to_pos):
+        for line in self.drawn_lines:
+            if (line[0] == from_pos and line[1] == to_pos) or \
+               (line[0] == to_pos and line[1] == from_pos):
+                return True
         return False
 
     def _distance_point_to_segment(self, p, a, b):
@@ -244,7 +259,12 @@ class Drawing(Widget):
                 from_pos = from_state["pos"]
                 to_pos = to_state["pos"]
 
-                # Check for intervening states
+                # Adjust start and end points to be on the circle border
+                direction = (to_pos - from_pos).normalize()
+                from_pos_adj = from_pos + direction * self.radius
+                to_pos_adj = to_pos - direction * self.radius
+
+                # Check for intervening states or parallel lines
                 intervenes = False
                 for state in self.extrapolated_map:
                     if (
@@ -258,11 +278,9 @@ class Drawing(Widget):
                         ):
                             intervenes = True
                             break
-
-                # Adjust start and end points to be on the circle border
-                direction = (to_pos - from_pos).normalize()
-                from_pos_adj = from_pos + direction * self.radius
-                to_pos_adj = to_pos - direction * self.radius
+                
+                if self.is_line_drawn(from_pos, to_pos):
+                    intervenes = True # Force a curved line for parallel transitions
 
                 if intervenes:
                     # Draw a curved line (Bezier)
@@ -301,6 +319,8 @@ class Drawing(Widget):
                     )
                     arrow_direction = (to_pos_adj - from_pos_adj).normalize()
                     symbol_pos = (from_pos + to_pos) / 2
+                
+                self.drawn_lines.append((from_pos, to_pos))
 
                 # Draw arrowhead
                 arrow_len = self.gap / 10
@@ -391,25 +411,28 @@ class Drawing(Widget):
 
     def __init__(self, fa, **kwargs):
         super().__init__(**kwargs)
-        self.current_pos = Vector(dp(150), dp(400))
+        self.size_hint = (None, None)
+        self.drawn_lines = []
         self.fa_data_dicts = fa
         self.fa_header = self.fa_data_dicts["fa_header"]
         self.fa_states = self.fa_data_dicts["fa_states"]
         self.transitions = self.fa_data_dicts["fa_transitions"]
         self.extrapolate()
+        self.size = (self.width, self.height)
+
         with self.canvas:
             Color(0, 0, 0, 1)
             for state in self.extrapolated_map:
                 Color(0, 0, 0, 1)
                 Line(
                     circle=(state["pos"].x, state["pos"].y, self.radius),
-                    width=self.width,
+                    width=self.line_width,
                 )
                 if state["is_accepting"] == 1:
                     Color(0, 0, 0, 1)
                     Line(
                         circle=(state["pos"].x, state["pos"].y, self.radius - 10),
-                        width=self.width,
+                        width=self.line_width,
                     )
                 my_label = Label()
                 my_label.text = state["name"]
@@ -432,6 +455,8 @@ class Drawing(Widget):
                     self.extrapolated_map, transition["to_state_name"]
                 )
                 self.draw_connection(from_state, symbol, to_state)
+
+            print("Height drawing: ", self.height)
 
 
 class FADetailWidget(BoxLayout):
@@ -685,7 +710,10 @@ class FADetailWidget(BoxLayout):
         transition_container.add_widget(transitions_scroll)
         layout1.add_widget(transition_container)
         self.add_widget(layout1)
-        self.add_widget(Drawing(self.fa_data_dicts))
+        scroll_drawing = ScrollView(bar_width=dp(10))
+        drawing_widget = Drawing(self.fa_data_dicts)
+        scroll_drawing.add_widget(drawing_widget)
+        self.add_widget(scroll_drawing)
 
         layout = BoxLayout()
         test_input = Button()
