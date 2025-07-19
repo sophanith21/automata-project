@@ -75,16 +75,9 @@ class FAListWidget(BoxLayout):
         title.bind(size=self._update_label_rect, pos=self._update_label_rect)
         self.add_widget(title)
         if app.fa_headers:
-            scroll_view = ScrollView()
-            scroll_view.do_scroll = (False, True)
-            boxlayout = BoxLayout()
-            boxlayout.size_hint = (1, None)
-            boxlayout.height = dp(300)
-
-            boxlayout.orientation = "vertical"
             another = BoxLayout()
             another.orientation = "horizontal"
-            another.size_hint = (1, None)
+            another.size_hint_y = None
             another.height = dp(75)
             label1 = Label(
                 text="Name",
@@ -106,8 +99,18 @@ class FAListWidget(BoxLayout):
             another.add_widget(label3)
             another.add_widget(label4)
             self.add_widget(another)
+
+            scroll_view = ScrollView()
+
+            boxlayout = BoxLayout()
+            boxlayout.size_hint_y = None
+            boxlayout.bind(minimum_height=boxlayout.setter("height"))
+
+            boxlayout.orientation = "vertical"
+
             for fa in app.fa_headers:
-                boxlayout.add_widget(FAWidget(fa))
+                FA = FAWidget(fa)
+                boxlayout.add_widget(FA)
             scroll_view.add_widget(boxlayout)
             self.add_widget(scroll_view)
         layout = BoxLayout()
@@ -230,8 +233,9 @@ class Drawing(Widget):
 
     def is_line_drawn(self, from_pos, to_pos):
         for line in self.drawn_lines:
-            if (line[0] == from_pos and line[1] == to_pos) or \
-               (line[0] == to_pos and line[1] == from_pos):
+            if (line[0] == from_pos and line[1] == to_pos) or (
+                line[0] == to_pos and line[1] == from_pos
+            ):
                 return True
         return False
 
@@ -278,9 +282,9 @@ class Drawing(Widget):
                         ):
                             intervenes = True
                             break
-                
+
                 if self.is_line_drawn(from_pos, to_pos):
-                    intervenes = True # Force a curved line for parallel transitions
+                    intervenes = True  # Force a curved line for parallel transitions
 
                 if intervenes:
                     # Draw a curved line (Bezier)
@@ -319,7 +323,7 @@ class Drawing(Widget):
                     )
                     arrow_direction = (to_pos_adj - from_pos_adj).normalize()
                     symbol_pos = (from_pos + to_pos) / 2
-                
+
                 self.drawn_lines.append((from_pos, to_pos))
 
                 # Draw arrowhead
