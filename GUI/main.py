@@ -347,9 +347,9 @@ class Drawing(Widget):
                 )
                 p2 = Vector(p2_x, p2_y).normalize() * arrow_len + to_pos_adj
                 Color(0, 0, 0, 1)
-                Line(points=(to_pos_adj.x, to_pos_adj.y, p1.x, p1.y))
+                Line(points=(to_pos_adj.x, to_pos_adj.y, p1.x, p1.y), width=dp(1.5))
                 Color(0, 0, 0, 1)
-                Line(points=(to_pos_adj.x, to_pos_adj.y, p2.x, p2.y))
+                Line(points=(to_pos_adj.x, to_pos_adj.y, p2.x, p2.y), width=dp(1.5))
 
                 if self.is_overlap(self.occupied_coordinate, symbol_pos):
                     symbol_pos.y -= 25
