@@ -13,14 +13,21 @@ To run the application, you need some requirements:
 - Have a database named automatadb and run the SQL script in automata-project/src/database/automatadb.sql to create the necessary tables (Note: the script is for MySQL DBMS)
 - Have a C++ compiler
 
+Clone the repository
+```bash
+git clone https://github.com/sophanith21/automata-project.git
+```
+
 Instructions to install the necessary modules for Python
 ```bash
 pip install kivy
 pip install mysql-connector-python
 ```
 
-Instruction to compile the C++ file on Window: (Make sure your current directory is at automata-project/src/cpp)
+Instructions to compile the C++ file on Windows: (Make sure your current directory is at automata-project/src/cpp)
 ```bash
 g++ -I ../../json-develop/include fa_processor.cpp -o fa_proccessor
 g++ -I ../../json-develop/include check_fa_type.cpp -o check_fa_type
 ```
+
+Now with everything done, you can run the code in "automata-project/GUI/main.py"
