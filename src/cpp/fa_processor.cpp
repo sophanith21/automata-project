@@ -319,6 +319,7 @@ string FiniteAutomaton::createDfaStateName(const set<string> &nfa_states) const
     oss << "}";
     return oss.str();
 }
+
 void FiniteAutomaton::parsedSetOfStatesToState()
 {
     map<string, string> SetStateToState;
@@ -465,24 +466,36 @@ std::optional<FiniteAutomaton> FiniteAutomaton::minimizeDfa() const
     };
 
     // Create states with combined names
-    for (size_t i = 0; i < partitions.size(); ++i)
-    {
-        bool is_accepting = false;
-        for (const auto &s : partitions[i])
-        {
-            if (std::find(accepting.begin(), accepting.end(), s) != accepting.end())
-            {
-                is_accepting = true;
-                break;
-            }
-        }
-        std::string state_name = createCombinedStateName(partitions[i]);
-        min_states.push_back({state_name, is_accepting});
+    std::vector<FAState> temp_states;
 
-        // Check if this partition contains the original start state
-        if (std::find(partitions[i].begin(), partitions[i].end(), start_state_) != partitions[i].end())
-            min_start_state = state_name;
+for (size_t i = 0; i < partitions.size(); ++i)
+{
+    bool is_accepting = false;
+    for (const auto &s : partitions[i])
+    {
+        if (std::find(accepting.begin(), accepting.end(), s) != accepting.end())
+        {
+            is_accepting = true;
+            break;
+        }
     }
+    std::string state_name = createCombinedStateName(partitions[i]);
+    FAState state = {state_name, is_accepting};
+
+    if (std::find(partitions[i].begin(), partitions[i].end(), start_state_) != partitions[i].end())
+    {
+        min_start_state = state_name;
+        min_states.insert(min_states.begin(), state); // insert at front
+    }
+    else
+    {
+        temp_states.push_back(state);
+    }
+}
+
+// Append the rest of the states
+min_states.insert(min_states.end(), temp_states.begin(), temp_states.end());
+
 
     // Build transitions
     for (size_t i = 0; i < partitions.size(); ++i)
@@ -507,9 +520,11 @@ std::optional<FiniteAutomaton> FiniteAutomaton::minimizeDfa() const
             }
         }
     }
+    FiniteAutomaton newDFA = FiniteAutomaton(name_ + "_min", "DFA", min_start_state, min_states, alphabet_, min_transitions);
+    newDFA.parsedSetOfStatesToState();
 
     // Return minimized DFA
-    return FiniteAutomaton(name_ + "_min", "DFA", min_start_state, min_states, alphabet_, min_transitions);
+    return newDFA;
 }
 
 // --- Main NFA to DFA Conversion Algorithm (Subset Construction) ---

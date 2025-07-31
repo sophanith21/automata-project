@@ -7,30 +7,32 @@
 using namespace std;
 using json = nlohmann::json;
 
-string checkFaType(const json& faData){
+string checkFaType(const json& faData) {
     const json& transitions = faData["transitions"];
     string faType = "DFA";
 
-    if(faData["hasEpsilon"]){
-        faType = "NFA";
+    if (faData["hasEpsilon"]) {
+        return "NFA";
     }
+
     for (auto& [state, transMap] : transitions.items()) {
         for (auto& [symbol, nextStates] : transMap.items()) {
-            if (nextStates.is_array() && nextStates.size() == 1) {
-                string nextTransition = nextStates[0];
-                if(nextTransition.find(',') != string::npos){
+            if (nextStates.is_array()) {
+                if (nextStates.size() != 1) {
                     faType = "NFA";
-                }
-                else if(nextTransition.find('-')!= string::npos){
-                    faType = "NFA";
+                } else {
+                    string nextTransition = nextStates[0];
+                    if(nextTransition.find(',') != string::npos || nextTransition.find('-') != string::npos){
+                        faType = "NFA";
+                    }
                 }
             }
         }
     }
 
     return faType;
-
 }
+
 int main(){
     string inputData((istreambuf_iterator<char>(cin)), istreambuf_iterator<char>());
     json faData = json::parse(inputData);

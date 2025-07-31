@@ -425,7 +425,39 @@ class Drawing(Widget):
         self.size = (self.width, self.height)
 
         with self.canvas:
+            state1 = self.extrapolated_map[0]
             Color(0, 0, 0, 1)
+            Line(
+                points=(
+                    state1["pos"].x - (self.radius * 3),
+                    state1["pos"].y,
+                    state1["pos"].x - self.radius,
+                    state1["pos"].y,
+                )
+            )
+            # arrowhead
+            Color(0, 0, 0, 1)
+            Line(
+                points=(
+                    state1["pos"].x - self.radius,
+                    state1["pos"].y,
+                    state1["pos"].x - self.radius - self.gap / 10,
+                    state1["pos"].y + self.gap / 15,
+                ),
+                width=dp(1),
+            )
+
+            Color(0, 0, 0, 1)
+            Line(
+                points=(
+                    state1["pos"].x - self.radius,
+                    state1["pos"].y,
+                    state1["pos"].x - self.radius - self.gap / 10,
+                    state1["pos"].y - self.gap / 15,
+                ),
+                width=dp(1),
+            )
+
             for state in self.extrapolated_map:
                 Color(0, 0, 0, 1)
                 Line(
